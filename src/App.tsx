@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { generateCaseData, updateCaseDetails, generateDeepDiveReport, analyzeSingleUrl, reviseSearchPrompt, defaultPrompt, loadCoordinatesCache } from './services/geminiService';
-import type { CaseData, PromptHistoryEntry, UserFeedback } from './types';
+import type { CaseData, CrimeCategory, PromptHistoryEntry, UserFeedback } from './types';
 import * as db from './db';
 import LoadingScreen from './components/LoadingScreen';
 import Dashboard from './components/Dashboard';
@@ -25,13 +25,9 @@ const App: React.FC = () => {
 
   // Zustand store selectors
   const {
-    cases,
     selectedCase,
     isFetching,
-    isImporting,
     isOverrideActive,
-    report,
-    activeAction,
     isRevisingPrompt,
     isPromptHistoryOpen,
     setCases,
@@ -356,7 +352,9 @@ const App: React.FC = () => {
 
         const now = new Date();
         const crimeCode = (partialCase.summary.crimeTypes && partialCase.summary.crimeTypes.length > 0)
-            ? crimeCategoryShortCodes[partialCase.summary.crimeTypes[0]] || 'OTH'
+            // crimeTypes arriva dall'IA come string[]: la chiave puo' non
+            // corrispondere a nessuna categoria nota, e in quel caso vale 'OTH'.
+            ? crimeCategoryShortCodes[partialCase.summary.crimeTypes[0] as CrimeCategory] || 'OTH'
             : 'OTH';
         
         const counter = await db.incrementAndGetCaseCounter();
@@ -372,11 +370,23 @@ const App: React.FC = () => {
             lastUpdateTimestamp: now.toISOString(),
             status: 'Updated',
             summary: partialCase.summary,
-            details: partialCase.details,
-            entities: partialCase.entities,
-            provenance: partialCase.provenance,
+            // analyzeSingleUrl restituisce un Partial: se l'IA omette un campo
+            // il caso va comunque costruito integro, con gli stessi default
+            // che generateCaseData applica ai casi trovati automaticamente.
+            details: partialCase.details ?? {
+                involvedForces: [],
+                operationName: null,
+                investigationReason: '',
+                seizedAssetsValue: null,
+                seizedAssetsDescription: null,
+            },
+            entities: partialCase.entities ?? { individuals: [], companies: [] },
+            provenance: partialCase.provenance ?? [],
             updates: [],
-            audio: partialCase.audio,
+            audio: partialCase.audio ?? {
+                ttsScript: partialCase.summary.title,
+                ttsScriptEn: 'Summary not available.',
+            },
             isImportant: true,
             isRead: true,
             hasReport: false,

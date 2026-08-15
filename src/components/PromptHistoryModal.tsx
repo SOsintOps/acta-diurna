@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useContext } from 'react';
-import { useCaseStore } from '../store/caseStore';
 import { ThemeContext } from '../contexts/ThemeContext';
 import * as db from '../db';
 import type { PromptHistoryEntry } from '../types';

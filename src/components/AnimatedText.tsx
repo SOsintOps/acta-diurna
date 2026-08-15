@@ -13,7 +13,6 @@ const AnimatedText: React.FC<AnimatedTextProps> = ({ text, speed = 50, mode = 'c
 
   useEffect(() => {
     setDisplayedText(''); // Reset on text change
-    let animationFrameId: number;
 
     if (mode === 'char') {
       let i = 0;

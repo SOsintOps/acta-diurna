@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import type { CaseData, DeepDiveReport, CrimeCategory, PromptHistoryEntry, UserFeedback } from '../types';
+import type { CaseData, DeepDiveReport, CrimeCategory } from '../types';
 import { crimeCategoryShortCodes, normalizeRegionName } from "../utils/crimeCategorizer";
 import { getActivePrompt, incrementAndGetCaseCounter, getSettings, setSettings } from '../db';
 import { useCaseStore } from '../store/caseStore';
@@ -79,7 +79,10 @@ const initialCityCoordinates: { [key: string]: { lat: number; lng: number } } = 
 
 let cityCoordinatesCache: { [key: string]: { lat: number; lng: number } } = {};
 
-const handleApiError = (error: any, context: string): never => {
+// L'annotazione di tipo sulla const, non solo sul valore di ritorno, e' cio'
+// che fa capire a TypeScript che ogni chiamata interrompe il flusso: senza,
+// le funzioni che terminano con handleApiError risultano "prive di return".
+const handleApiError: (error: any, context: string) => never = (error, context) => {
     console.error(`Gemini API call failed in ${context}:`, error);
     if (error.message && error.message.toLowerCase().includes('quota')) {
         throw new Error('API quota exceeded. Please select a different model and retry.');

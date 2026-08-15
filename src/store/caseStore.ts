@@ -5,7 +5,7 @@ import type { CaseStore } from '../types';
 
 export const useCaseStore = create<CaseStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       cases: [],
       selectedCase: null,
       isFetching: false,

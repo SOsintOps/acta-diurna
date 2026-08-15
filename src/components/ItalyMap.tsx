@@ -19,9 +19,11 @@ const ItalyMap: React.FC<ItalyMapProps> = ({ cases, onSelectCase, selectedCaseId
   const [regionGeoJson, setRegionGeoJson] = useState<any>(null);
   const { theme } = useContext(ThemeContext);
 
-  // Fetch GeoJSON for Italian regions on component mount
+  // Confini regionali serviti dall'applicazione, non da una risorsa remota:
+  // il file e' vendorizzato in public/ (fonte openpolis/geojson-italy, coordinate
+  // arrotondate a 4 decimali). Vedi docs/help.md per la provenienza.
   useEffect(() => {
-    fetch('https://raw.githubusercontent.com/openpolis/geojson-italy/master/geojson/limits_IT_regions.geojson')
+    fetch('/limits_IT_regions.geojson')
       .then(response => response.json())
       .then(data => setRegionGeoJson(data))
       .catch(error => console.error('Error fetching region GeoJSON:', error));

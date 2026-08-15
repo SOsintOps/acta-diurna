@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type, GenerateContentResponse } from "@google/ai";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import type { CaseData, DeepDiveReport, CrimeCategory, PromptHistoryEntry, UserFeedback } from '../types';
 import { crimeCategoryShortCodes, normalizeRegionName } from "../utils/crimeCategorizer";
 import { getActivePrompt, incrementAndGetCaseCounter, getSettings, setSettings } from '../db';

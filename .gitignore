@@ -1,0 +1,35 @@
+# Dipendenze e build
+node_modules
+dist
+dist-ssr
+*.local
+
+# Segreti — la chiave Gemini non deve mai finire nel repo
+.env
+.env.*
+!.env.example
+
+# Materiale di lavoro: sta nel repo privato acta-diurna-lab
+.planning/
+notes/
+backups/
+gemini.md
+
+# Log
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor e sistema operativo
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

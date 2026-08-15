@@ -2,11 +2,14 @@
 import Dexie, { type Table } from 'dexie';
 import type { CaseData, Settings, PromptHistoryEntry } from './types';
 
-export class PoliceChronicleDB extends Dexie {
+export class ActaDiurnaDB extends Dexie {
     cases!: Table<CaseData, string>;
     settings!: Table<Settings, string>;
 
     constructor() {
+        // Il nome del database resta quello storico: rinominarlo renderebbe
+        // irraggiungibili gli IndexedDB gia' esistenti sui browser degli
+        // analisti, cioe' tutti i casi finora raccolti.
         super('PoliceChronicleDB');
         
         (this as Dexie).version(8).stores({
@@ -22,7 +25,7 @@ export class PoliceChronicleDB extends Dexie {
     }
 }
 
-export const db = new PoliceChronicleDB();
+export const db = new ActaDiurnaDB();
 
 // --- Settings Service Functions ---
 

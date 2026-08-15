@@ -1,13 +1,13 @@
 
-# Guida Operativa all'Analisi - Police Chronicle
+# Guida Operativa all'Analisi - Acta Diurna
 
-Questo documento fornisce un flusso di lavoro strategico e metodologico per l'analista che utilizza Police Chronicle. L'obiettivo è massimizzare l'efficacia dello strumento aderendo a principi di rigore, oggettività e tracciabilità dell'analisi.
+Questo documento fornisce un flusso di lavoro strategico e metodologico per l'analista che utilizza Acta Diurna. L'obiettivo è massimizzare l'efficacia dello strumento aderendo a principi di rigore, oggettività e tracciabilità dell'analisi.
 
 ---
 
 ### Principio Fondamentale: Lo Strumento come Acceleratore, l'Analista come Garante
 
-Police Chronicle è un potente **acceleratore di intelligence**, non un oracolo. Automatizza le fasi più dispendiose di tempo della raccolta e strutturazione preliminare delle informazioni (OSINT). Tuttavia, l'analista umano rimane il **responsabile finale e insostituibile della validazione, interpretazione, contestualizzazione e del giudizio analitico**.
+Acta Diurna è un potente **acceleratore di intelligence**, non un oracolo. Automatizza le fasi più dispendiose di tempo della raccolta e strutturazione preliminare delle informazioni (OSINT). Tuttavia, l'analista umano rimane il **responsabile finale e insostituibile della validazione, interpretazione, contestualizzazione e del giudizio analitico**.
 
 L'IA fornisce i "mattoni" (i dati estratti); è l'analista che costruisce l'"edificio" (l'intelligence) e ne garantisce la solidità.
 
@@ -22,7 +22,7 @@ L'obiettivo di questa fase è scremare rapidamente le nuove informazioni, valuta
 1.  **Inizia dalla Scheda "NON LETTI"**: Questo è il tuo punto di partenza quotidiano. Contiene tutti i nuovi casi identificati dall'IA che non hai ancora esaminato.
 2.  **Valutazione Rapida (30 secondi per caso)**: Per ogni caso, leggi il titolo e la località. Controlla l'icona "Importante" (stella) o lo stato "Archiviato". Questo ti dà un'idea immediata della potenziale rilevanza.
 3.  **CRITICO: Valuta le Fonti PRIMA del Contenuto**: Seleziona un caso. La tua prima azione non è leggere il riepilogo dell'IA, ma **scorrere fino alla sezione "FONTI"**.
-    -   **Verifica la Qualità della Fonte**: La fonte è un'agenzia di stampa autorevole (es. ANSA), un quotidiano nazionale, una testata locale nota o un blog sconosciuto? La credibilità della fonte è il primo e più importante indicatore della qualità dell'informazione. Police Chronicle scarta le fonti non verificabili, ma la valutazione della loro autorevolezza spetta a te.
+    -   **Verifica la Qualità della Fonte**: La fonte è un'agenzia di stampa autorevole (es. ANSA), un quotidiano nazionale, una testata locale nota o un blog sconosciuto? La credibilità della fonte è il primo e più importante indicatore della qualità dell'informazione. Acta Diurna scarta le fonti non verificabili, ma la valutazione della loro autorevolezza spetta a te.
     -   **Apri e Leggi la Fonte Originale**: Clicca su uno o due link. Confronta i fatti principali (nomi, luoghi, importi) dell'articolo originale con il riepilogo generato dall'IA nel pannello "CaseDetail". Questo passaggio è fondamentale per calibrare la tua fiducia nella precisione dell'estrazione dell'IA per quel determinato tipo di notizia.
 4.  **Fornisci Feedback Immediato**: Basandoti su questa valutazione iniziale, compi un'azione decisa. Questo è il modo più efficace per addestrare l'IA.
     -   **Caso Chiaramente Irrilevante**: Rumore, notizia non pertinente, duplicato? Usa l'azione **"IRRILEVANTE"** (Archivia). Questo è un feedback negativo potente.
@@ -77,7 +77,7 @@ Questa è la fase dove i dati grezzi vengono trasformati in vera e propria intel
     -   **Integra con Database**: Fonde il database importato con quello esistente. Questa è una potente funzionalità di **intelligence collaborativa**:
         -   Aggiunge nuovi casi e aggiorna quelli esistenti se la versione importata è più recente.
         -   Unisce la cronologia di apprendimento dell'IA, permettendo al sistema di beneficiare dell'esperienza di più analisti.
-        -   Usa questa opzione per consolidare i dati provenienti da diverse istanze di Police Chronicle.
+        -   Usa questa opzione per consolidare i dati provenienti da diverse istanze di Acta Diurna.
 -   **"SVUOTA DB"**: Questa è un'azione drastica e irreversibile. Usala solo se:
     1.  Vuoi iniziare un progetto di analisi completamente nuovo da zero.
     2.  Il database è diventato corrotto o inutilizzabile.
@@ -85,7 +85,7 @@ Questa è la fase dove i dati grezzi vengono trasformati in vera e propria intel
 
 ### Sicurezza dei Dati e Retrocompatibilità
 
--   **Migrazione Automatica dei Dati**: Police Chronicle è progettato per durare nel tempo. Quando importi un file di backup proveniente da una versione precedente del software, il sistema esegue automaticamente una **migrazione dei dati**. Questo processo aggiorna in modo trasparente la struttura dei vecchi dati per renderla compatibile con la versione più recente dell'applicazione.
+-   **Migrazione Automatica dei Dati**: Acta Diurna è progettato per durare nel tempo. Quando importi un file di backup proveniente da una versione precedente del software, il sistema esegue automaticamente una **migrazione dei dati**. Questo processo aggiorna in modo trasparente la struttura dei vecchi dati per renderla compatibile con la versione più recente dell'applicazione.
 -   **Cosa significa?** Significa che puoi importare un backup vecchio di mesi o anni e il sistema si occuperà di aggiungere i campi mancanti e modernizzare la struttura dei dati, garantendo che nessuna informazione venga persa e che non si verifichino errori a causa di schemi obsoleti. **I tuoi archivi storici sono al sicuro e sempre utilizzabili.**
 
 ---

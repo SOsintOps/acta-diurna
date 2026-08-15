@@ -38,6 +38,8 @@ export const useCaseStore = create<CaseStore>()(
       setAiModel: (model) => set({ aiModel: model }),
     }),
     {
+      // Chiave storica, mantenuta per non perdere le impostazioni salvate
+      // (modello AI scelto, override del monitoraggio) al rebrand.
       name: 'police-chronicle-storage',
       storage: createJSONStorage(() => localStorage),
       // Persist user preferences: theme, override, and selected AI model

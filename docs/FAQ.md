@@ -1,13 +1,13 @@
 
-# Domande Frequenti (FAQ) - Police Chronicle
+# Domande Frequenti (FAQ) - Acta Diurna
 
-Questa guida è pensata per un analista che si avvicina per la prima volta a Police Chronicle e risponde alle domande più comuni sul suo funzionamento, le sue capacità e l'affidabilità dei dati. Per un flusso di lavoro operativo, consulta la nostra **[Guida Operativa all'Analisi (help.md)](help.md)**.
+Questa guida è pensata per un analista che si avvicina per la prima volta a Acta Diurna e risponde alle domande più comuni sul suo funzionamento, le sue capacità e l'affidabilità dei dati. Per un flusso di lavoro operativo, consulta la nostra **[Guida Operativa all'Analisi (help.md)](help.md)**.
 
 ---
 
-### 1. Cos'è Police Chronicle?
+### 1. Cos'è Acta Diurna?
 
-Police Chronicle è una dashboard avanzata di **OSINT (Open-Source Intelligence)**. Utilizza un'intelligenza artificiale (Google Gemini) per analizzare in modo autonomo fonti giornalistiche pubbliche online (notizie, articoli, comunicati stampa) e identificare operazioni delle forze dell'ordine in Italia. L'obiettivo è estrarre, strutturare e presentare queste informazioni in un formato chiaro e immediatamente utilizzabile per l'analisi.
+Acta Diurna è una dashboard avanzata di **OSINT (Open-Source Intelligence)**. Utilizza un'intelligenza artificiale (Google Gemini) per analizzare in modo autonomo fonti giornalistiche pubbliche online (notizie, articoli, comunicati stampa) e identificare operazioni delle forze dell'ordine in Italia. L'obiettivo è estrarre, strutturare e presentare queste informazioni in un formato chiaro e immediatamente utilizzabile per l'analisi.
 
 ### 2. Da dove provengono i dati?
 
@@ -15,7 +15,7 @@ I dati provengono **esclusivamente da fonti aperte e pubblicamente accessibili s
 
 ### 3. Quanto sono affidabili le informazioni?
 
-L'affidabilità è una priorità assoluta. Police Chronicle implementa un robusto sistema di **verifica della provenienza**:
+L'affidabilità è una priorità assoluta. Acta Diurna implementa un robusto sistema di **verifica della provenienza**:
 
 - **Validazione delle Fonti:** Ogni fonte (URL) proposta dall'IA viene confrontata con i metadati forniti da Google Search. Questo processo corregge link errati e scarta le fonti "allucinate" o inesistenti.
 - **Scarto dei Dati Non Verificabili:** Se un caso generato dall'IA rimane senza nemmeno una fonte verificata, viene **automaticamente scartato** e non compare mai nell'interfaccia.
@@ -60,7 +60,7 @@ Quando importi un file di backup, ora hai due opzioni:
 
 ### 7. Cosa succede se importo un backup di una vecchia versione?
 
-Non c'è da preoccuparsi. Il sistema è progettato per la **retrocompatibilità**. Quando carichi un file di backup, Police Chronicle rileva automaticamente se proviene da una versione precedente del software. In tal caso, esegue una **migrazione automatica dei dati**, aggiornando la loro struttura per renderla compatibile con l'ultima versione dell'applicazione. Nessuna informazione viene persa. Questo garantisce che i tuoi archivi rimangano sempre accessibili e utilizzabili, indipendentemente da quando sono stati creati.
+Non c'è da preoccuparsi. Il sistema è progettato per la **retrocompatibilità**. Quando carichi un file di backup, Acta Diurna rileva automaticamente se proviene da una versione precedente del software. In tal caso, esegue una **migrazione automatica dei dati**, aggiornando la loro struttura per renderla compatibile con l'ultima versione dell'applicazione. Nessuna informazione viene persa. Questo garantisce che i tuoi archivi rimangano sempre accessibili e utilizzabili, indipendentemente da quando sono stati creati.
 
 ### 8. Posso perdere i miei dati?
 
@@ -90,7 +90,7 @@ Da qui puoi:
 
 ### 11. Perché una città non compariva sulla mappa?
 
-In passato, il sistema poteva omettere una città se il suo nome era scritto in modo errato o ambiguo nella fonte originale. Questo limite è stato superato. Police Chronicle ora utilizza un **sistema di geocodifica avanzato a due fasi**:
+In passato, il sistema poteva omettere una città se il suo nome era scritto in modo errato o ambiguo nella fonte originale. Questo limite è stato superato. Acta Diurna ora utilizza un **sistema di geocodifica avanzato a due fasi**:
 
 1.  **Ricerca Iniziale:** Il sistema esegue una ricerca rapida per le coordinate della città.
 2.  **Auto-Correzione Contestuale:** Se la prima ricerca fallisce, il sistema non si arrende. Invia una seconda richiesta all'IA, fornendole non solo il nome della città, ma anche il **contesto della notizia** (es. il titolo del caso). Questo permette all'IA di dedurre la località corretta anche in presenza di refusi o nomi di frazioni poco comuni (es. "Platì").

@@ -1,6 +1,6 @@
 # Roadmap e Idee Future (TODO)
 
-Questo documento elenca le funzionalità e i miglioramenti pianificati o considerati per le future versioni di Police Chronicle. Non c'è una timeline definita per queste idee.
+Questo documento elenca le funzionalità e i miglioramenti pianificati o considerati per le future versioni di Acta Diurna. Non c'è una timeline definita per queste idee.
 
 ---
 

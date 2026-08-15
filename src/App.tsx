@@ -18,7 +18,8 @@ import { migrateImportedData } from './utils/migration';
 
 const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
-  const [appVersion, setAppVersion] = useState<string>('1.4.2');
+  // Iniettata da vite a partire da package.json (vedi vite.config.ts).
+  const appVersion = process.env.APP_VERSION ?? '0.0.0';
   const [caseToArchive, setCaseToArchive] = useState<string | null>(null);
   const [docInfo, setDocInfo] = useState<{ doc: string; title: string } | null>(null);
   const [importFileData, setImportFileData] = useState<string | null>(null);
@@ -199,16 +200,6 @@ const App: React.FC = () => {
     async function loadInitialData() {
         await loadCoordinatesCache();
         
-        try {
-            const response = await fetch('/metadata.json');
-            const metadata = await response.json();
-            if (metadata.version) {
-                setAppVersion(metadata.version);
-            }
-        } catch (e) {
-            console.error("Failed to load app metadata:", e);
-        }
-
         const dbCases = await db.getAllCases();
         if (dbCases.length > 0) {
             const sortedCases = await loadAndSetCases();

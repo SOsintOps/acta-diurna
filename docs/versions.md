@@ -1,6 +1,53 @@
-# Cronologia delle Versioni di Police Chronicle
+# Cronologia delle Versioni di Acta Diurna
 
-Questo documento traccia le principali modifiche, funzionalità e miglioramenti introdotti in ogni versione di Police Chronicle.
+Questo documento traccia le principali modifiche, funzionalità e miglioramenti introdotti in ogni versione di Acta Diurna.
+
+---
+
+### Versione 0.1.0
+*Data: 2026-08-15*
+
+**🏛️ Rinascita come Acta Diurna: rebrand, repository pubblico e risanamento**
+
+Il progetto cambia nome, si separa in due repository e riparte da una
+numerazione onesta. *Acta Diurna* era la gazzetta quotidiana affissa nel Foro
+romano, il primo bollettino di notizie pubbliche della storia. Il nome
+precedente, *Police Chronicle*, suggeriva uno strumento delle forze
+dell'ordine: questa è invece un'applicazione civile che legge esclusivamente
+fonti giornalistiche aperte.
+
+**Perché si riparte da 0.1.0.** La versione 1.6.0 non è mai stata realmente
+eseguita da nessuno. Un difetto in `index.html` faceva partire il codice
+precedente, e il codice della 1.6 conteneva un import verso un pacchetto npm
+inesistente. La numerazione 0.x dichiara ciò che il software è davvero: un
+prototipo funzionale non ancora validato sul campo. Le versioni da 1.0.0 a
+1.6.0 elencate qui sotto restano come cronologia dello sviluppo precedente.
+
+-   **Repository separati**: il codice dell'applicazione e la documentazione
+    utente vivono in un repository pubblico; materiale di lavoro, appunti e
+    backup del database restano in un repository privato.
+-   **Un solo albero sorgente**: le copie duplicate e divergenti dei sorgenti,
+    residuo di una riorganizzazione mai completata, sono state eliminate.
+-   **Un solo punto di ingresso**: `index.html` montava due applicazioni React
+    sullo stesso elemento, e la seconda sovrascriveva la prima. È il motivo per
+    cui nessuna delle funzionalità dalla 1.4.4 in poi risultava attiva.
+-   **Build reale con Vite**: il progetto si compila e si avvia con
+    `npm install` e `npm run dev`. La procedura descritta in precedenza non
+    poteva funzionare, perché nessun browser esegue direttamente file TypeScript.
+-   **Nessuna risorsa remota**: React, Dexie, Zustand, Leaflet, Tailwind e le
+    altre dipendenze non arrivano più da CDN esterni ma sono installate come
+    pacchetti npm. Anche il GeoJSON dei confini regionali, prima scaricato da
+    GitHub a ogni avvio, è ora servito dall'applicazione.
+-   **Correzioni di stabilità**: sei funzioni di interrogazione dell'IA
+    potevano terminare senza restituire alcun valore; la creazione manuale di
+    un caso da URL poteva produrre un caso incompleto quando l'IA ometteva dei
+    campi.
+-   **Licenza MIT effettiva**: il file `LICENSE` era vuoto, quindi il codice era
+    di fatto privo di licenza. Ora contiene il testo completo.
+
+I database esistenti restano pienamente compatibili: il nome tecnico
+dell'archivio locale non è stato modificato, quindi i casi già raccolti e le
+impostazioni salvate sopravvivono al rebrand.
 
 ---
 

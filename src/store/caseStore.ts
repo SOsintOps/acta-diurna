@@ -1,0 +1,50 @@
+
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { CaseStore } from '../types';
+
+export const useCaseStore = create<CaseStore>()(
+  persist(
+    (set, get) => ({
+      cases: [],
+      selectedCase: null,
+      isFetching: false,
+      isImporting: false,
+      isOverrideActive: false,
+      error: null,
+      activeAction: null,
+      report: null,
+      isRevisingPrompt: false,
+      isModelSelectorOpen: false,
+      isPromptHistoryOpen: false,
+      aiModel: 'gemini-2.5-flash',
+
+      setCases: (cases) => set({ cases }),
+      setSelectedCase: (caseData) => set({ selectedCase: caseData }),
+      setIsFetching: (isFetching) => set({ isFetching }),
+      setIsImporting: (isImporting) => set({ isImporting }),
+      
+      toggleOverride: () => set((state) => ({ isOverrideActive: !state.isOverrideActive })),
+      
+      setError: (error) => set({ error }),
+      clearError: () => set({ error: null }),
+      
+      setActiveAction: (action) => set({ activeAction: action }),
+      setReport: (report) => set({ report }),
+      
+      setIsRevisingPrompt: (isRevising) => set({ isRevisingPrompt: isRevising }),
+      setIsModelSelectorOpen: (isOpen) => set({ isModelSelectorOpen: isOpen }),
+      setIsPromptHistoryOpen: (isOpen) => set({ isPromptHistoryOpen: isOpen }),
+      setAiModel: (model) => set({ aiModel: model }),
+    }),
+    {
+      name: 'police-chronicle-storage',
+      storage: createJSONStorage(() => localStorage),
+      // Persist user preferences: theme, override, and selected AI model
+      partialize: (state) => ({ 
+        isOverrideActive: state.isOverrideActive,
+        aiModel: state.aiModel 
+      }),
+    }
+  )
+);

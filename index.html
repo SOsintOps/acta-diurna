@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/resources/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Police Chronicle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <style>
+      body {
+        background-color: #000;
+        color: #fff;
+        font-family: 'Helvetica', 'Arial', sans-serif;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      body.light-theme {
+        background-color: #f4f4f5; /* Zinc 100 */
+        color: #18181b; /* Zinc 900 */
+      }
+
+      .font-mono {
+        font-family: 'Courier New', 'Roboto Mono', monospace;
+      }
+      /* Custom scrollbar for the feed */
+      .feed-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .feed-scrollbar::-webkit-scrollbar-track {
+        background: #1a1a1a;
+      }
+      .feed-scrollbar::-webkit-scrollbar-thumb {
+        background: #ff0000;
+      }
+      body.light-theme .feed-scrollbar::-webkit-scrollbar-track {
+        background: #e4e4e7; /* Zinc 200 */
+      }
+      body.light-theme .feed-scrollbar::-webkit-scrollbar-thumb {
+        background: #dc2626; /* Red 600 */
+      }
+
+      .map-glow {
+        filter: drop-shadow(0 0 5px #ff0000) drop-shadow(0 0 10px #ff0000);
+      }
+      /* Leaflet custom themes */
+      .leaflet-container {
+        background: #000;
+      }
+      body.light-theme .leaflet-container {
+        background: #e4e4e7; /* Zinc 200 */
+      }
+      .leaflet-control-attribution a {
+        color: #999;
+      }
+      body.light-theme .leaflet-control-attribution a {
+        color: #3f3f46; /* Zinc 700 */
+      }
+      .leaflet-control-attribution {
+        background: rgba(0,0,0,0.7) !important;
+        color: #999;
+      }
+      body.light-theme .leaflet-control-attribution {
+        background: rgba(255,255,255,0.7) !important;
+        color: #3f3f46; /* Zinc 700 */
+      }
+      .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+        background: #1a1a1a;
+        color: #fff;
+        border: 1px solid #ff0000;
+      }
+      body.light-theme .leaflet-popup-content-wrapper, body.light-theme .leaflet-popup-tip {
+        background: #fff;
+        color: #18181b; /* Zinc 900 */
+        border: 1px solid #d4d4d8; /* Zinc 300 */
+        box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+      }
+
+      /* Report content styling */
+      .report-content h3 {
+        font-size: 1.125rem; /* text-lg */
+        font-weight: 600;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.25rem;
+        border-bottom: 1px solid rgba(255, 0, 0, 0.5);
+      }
+      .report-content ol {
+        list-style-type: decimal;
+        padding-left: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .report-content ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+       .report-content li {
+        margin-bottom: 0.25rem;
+      }
+      .report-content p {
+         margin-bottom: 0.75rem;
+      }
+      .report-content strong {
+        font-weight: 600;
+        color: #ff0000;
+      }
+       body.light-theme .report-content h3 {
+        border-bottom-color: #ef4444; /* red-500 */
+      }
+      body.light-theme .report-content strong {
+        color: #b91c1c; /* red-700 */
+      }
+
+      /* Loading Animation */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fadeInUp {
+        opacity: 0; /* Start hidden */
+        animation-name: fadeInUp;
+        animation-duration: 0.5s;
+        animation-fill-mode: forwards;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.9.0",
+    "leaflet": "https://esm.sh/leaflet@1.9.4",
+    "@types/leaflet": "https://esm.sh/@types/leaflet@1.9.12",
+    "dexie": "https://esm.sh/dexie@^4.0.7",
+    "zustand": "https://esm.sh/zustand@^4.5.4",
+    "zustand/": "https://esm.sh/zustand@^4.5.4/",
+    "react-markdown": "https://esm.sh/react-markdown@^9.0.1",
+    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script type="module" src="/src/index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

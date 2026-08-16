@@ -4,6 +4,72 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
 
 ---
 
+### Versione 0.2.0
+*Data: 2026-08-16*
+
+**Si apre, e ha una faccia sua**
+
+Due cose bloccavano il progetto: l'applicazione non partiva, e la grafica non
+era quella voluta. Questa versione risolve entrambe.
+
+**L'applicazione si avvia senza chiave.** Prima `geminiService.ts` sollevava un
+errore al caricamento del modulo se mancava la variabile d'ambiente `API_KEY`,
+cioè **prima che React montasse**: senza una chiave valida a build time non
+c'era modo di vedere nulla, e nessun modo di inserirla dall'interfaccia. Ora il
+client si costruisce alla prima chiamata al modello. L'applicazione parte
+sempre, l'archivio resta consultabile, e se la chiave manca compare la finestra
+per inserirla.
+
+**La chiave la inserisce l'admin.** Viene salvata nella tabella `settings` del
+database dell'applicazione, non compilata nel bundle. L'interfaccia mostra
+soltanto se una chiave è presente, mai il suo valore. Una chiave fornita in
+`.env` continua a funzionare come **override** e vince su quella salvata, ma non
+è più obbligatoria. Il pulsante **CHIAVE API** nell'intestazione la reimposta o
+la revoca in qualsiasi momento.
+
+**Interfaccia in direzione Samaritan.** L'intera applicazione è stata ridisegnata
+sul linguaggio visivo dell'intelligenza artificiale di *Person of Interest*:
+
+-   Filo di 2px, spigolo vivo. **Nessun angolo arrotondato in tutta
+    l'applicazione**, nessuna ombra morbida, nessuna sfocatura.
+-   Il bagliore è del colore stesso, con scostamento zero: l'interfaccia emette
+    luce invece di riceverla.
+-   Il rosso torna a essere il colore della minaccia. I comandi secondari sono
+    arancioni.
+-   I titoli dei pannelli sbordano dal riquadro invece di starci dentro.
+-   Il maiuscolo è della cornice e delle etichette. Il corpo del testo resta
+    leggibile: nomi e riassunti dei casi non vengono forzati in maiuscolo.
+-   I casi sulla mappa sono **quadrati** con alone, non pallini. L'unico
+    elemento tondo rimasto è la spia di registrazione.
+-   Il commutatore in alto a destra non accende un tema chiaro: è l'inversione
+    da `#060606` a `#f9f9f9`, lenta due secondi.
+
+**Carattere Nova Mono**, vendorizzato in `public/fonts/` con la sua licenza SIL
+OFL. Nessun carattere caricato da servizi remoti. Il carattere della serie,
+FF Magda Clean Mono, è commerciale e non redistribuibile in un repository MIT.
+
+**I colori stanno in un punto solo.** Erano in ternari sul tema sparsi in venti
+componenti. Ora sono variabili CSS in `src/index.css`: cambiare la direzione
+visiva significa cambiare cinque righe.
+
+**Difetti corretti**
+
+-   **Le finestre finivano sotto la mappa.** Avevano `z-index: 50`, ma Leaflet
+    arriva a 1000 con i suoi pannelli e controlli. La finestra della chiave
+    compariva e diventava subito inaccessibile. Colpiva tutte le finestre.
+-   **La documentazione in-app non si apriva.** `DocsModal` chiedeva
+    `/docs/help.md`, ma i file stavano fuori da `public/`: la richiesta
+    rispondeva 200 restituendo l'HTML dell'applicazione, che finiva nel lettore
+    markdown. I documenti sono stati spostati in `public/docs/`. È la regressione
+    introdotta dal passaggio a Vite.
+-   Testo dei pulsanti fuori centro: `letter-spacing` aggiunge spazio anche dopo
+    l'ultima lettera. Compensato con un rientro pari alla spaziatura.
+-   I pulsanti dell'intestazione si sovrapponevano quando lo spazio mancava: ora
+    la barra va a capo.
+-   L'intestazione diceva ancora **POLICE CHRONICLE**. Ora dice Acta Diurna.
+
+---
+
 ### Versione 0.1.0
 *Data: 2026-08-15*
 

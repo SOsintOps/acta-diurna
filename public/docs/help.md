@@ -92,7 +92,7 @@ Questa è la fase dove i dati grezzi vengono trasformati in vera e propria intel
 
 ## Scenari Comuni e Troubleshooting
 
--   **"L'IA non trova nessun nuovo caso dopo un 'CHECK NEWS NOW'."**
+-   **"L'IA non trova nessun nuovo caso dopo un «CERCA ORA»."**
     -   **Causa:** Questo è un risultato normale e atteso. Significa che, nel suo range di ricerca (ultimi 3 giorni), non sono state trovate nuove notizie che corrispondono ai criteri di rilevanza del suo prompt attivo.
     -   **Azione:** Nessuna. Riprova più tardi.
 

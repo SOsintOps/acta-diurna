@@ -11,8 +11,10 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // La chiave viene iniettata a build-time: chi compila usa la propria.
-      // Vedi .env.example e la sezione "Installazione" del README.
+      // Chiave a build-time FACOLTATIVA: quando c'e' fa da override e vince su
+      // quella inserita dall'admin, quando manca l'applicazione parte lo stesso
+      // e chiede la chiave dall'interfaccia. Vedi src/services/apiKey.ts.
+      // Attenzione: se la fornisci, finisce in chiaro nel bundle.
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.APP_VERSION': JSON.stringify(version),

@@ -11,6 +11,8 @@ import { crimeCategoryShortCodes } from './utils/crimeCategorizer';
 import RevisionProgressModal from './components/RevisionProgressModal';
 import ArchiveOptionsModal from './components/ArchiveOptionsModal';
 import ModelSelectorModal from './components/ModelSelectorModal';
+import ApiKeyModal from './components/ApiKeyModal';
+import { hasApiKey } from './services/apiKey';
 import PromptHistoryModal from './components/PromptHistoryModal';
 import DocsModal from './components/DocsModal';
 import ImportOptionsModal from './components/ImportOptionsModal';
@@ -42,6 +44,7 @@ const App: React.FC = () => {
     setIsRevisingPrompt,
     setIsModelSelectorOpen,
     setIsPromptHistoryOpen,
+    setIsApiKeyModalOpen,
   } = useCaseStore();
 
   const loadAndSetCases = useCallback(async () => {
@@ -199,7 +202,14 @@ const App: React.FC = () => {
   useEffect(() => {
     async function loadInitialData() {
         await loadCoordinatesCache();
-        
+
+        // Senza chiave non si chiama il modello: si chiede la chiave e basta.
+        // L'archivio gia' raccolto resta consultabile in ogni caso.
+        const keyConfigured = await hasApiKey();
+        if (!keyConfigured) {
+            setIsApiKeyModalOpen(true);
+        }
+
         const dbCases = await db.getAllCases();
         if (dbCases.length > 0) {
             const sortedCases = await loadAndSetCases();
@@ -207,7 +217,7 @@ const App: React.FC = () => {
             if (activeCases.length > 0) {
                 setSelectedCase(activeCases[0]);
             }
-        } else {
+        } else if (keyConfigured) {
             fetchCases();
         }
         
@@ -598,6 +608,7 @@ const App: React.FC = () => {
   };
 
   const handleOpenModelSelector = () => setIsModelSelectorOpen(true);
+  const handleOpenApiKey = () => setIsApiKeyModalOpen(true);
   const handleOpenPromptHistory = () => setIsPromptHistoryOpen(true);
   const handleClosePromptHistory = () => setIsPromptHistoryOpen(false);
   const handleOpenDocs = (doc: string, title: string) => setDocInfo({ doc, title });
@@ -641,6 +652,7 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
        <ModelSelectorModal />
+       <ApiKeyModal />
        {isRevisingPrompt && <RevisionProgressModal />}
        {caseToArchive && (
         <ArchiveOptionsModal 
@@ -679,6 +691,7 @@ const App: React.FC = () => {
           onReportUrl={handleReportUrl}
           onClearDatabase={handleClearDatabase}
           onOpenModelSelector={handleOpenModelSelector}
+          onOpenApiKey={handleOpenApiKey}
           onOpenPromptHistory={handleOpenPromptHistory}
           onOpenDocs={handleOpenDocs}
         />

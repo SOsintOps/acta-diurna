@@ -119,6 +119,7 @@ export interface CaseStore {
   isRevisingPrompt: boolean;
   isModelSelectorOpen: boolean;
   isPromptHistoryOpen: boolean;
+  isApiKeyModalOpen: boolean;
   aiModel: string;
   error: string | null;
   activeAction: { caseID: string; action: 'updating' | 'reporting' | 'analyzingUrl' } | null;
@@ -135,5 +136,6 @@ export interface CaseStore {
   setIsRevisingPrompt: (isRevising: boolean) => void;
   setIsModelSelectorOpen: (isOpen: boolean) => void;
   setIsPromptHistoryOpen: (isOpen: boolean) => void;
+  setIsApiKeyModalOpen: (isOpen: boolean) => void;
   setAiModel: (model: string) => void;
 }

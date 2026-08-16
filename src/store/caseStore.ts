@@ -17,6 +17,7 @@ export const useCaseStore = create<CaseStore>()(
       isRevisingPrompt: false,
       isModelSelectorOpen: false,
       isPromptHistoryOpen: false,
+      isApiKeyModalOpen: false,
       aiModel: 'gemini-2.5-flash',
 
       setCases: (cases) => set({ cases }),
@@ -35,6 +36,7 @@ export const useCaseStore = create<CaseStore>()(
       setIsRevisingPrompt: (isRevising) => set({ isRevisingPrompt: isRevising }),
       setIsModelSelectorOpen: (isOpen) => set({ isModelSelectorOpen: isOpen }),
       setIsPromptHistoryOpen: (isOpen) => set({ isPromptHistoryOpen: isOpen }),
+      setIsApiKeyModalOpen: (isOpen) => set({ isApiKeyModalOpen: isOpen }),
       setAiModel: (model) => set({ aiModel: model }),
     }),
     {

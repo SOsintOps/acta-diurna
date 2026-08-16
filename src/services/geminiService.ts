@@ -2,17 +2,33 @@ import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import type { CaseData, DeepDiveReport, CrimeCategory } from '../types';
 import { crimeCategoryShortCodes, normalizeRegionName } from "../utils/crimeCategorizer";
 import { getActivePrompt, incrementAndGetCaseCounter, getSettings, setSettings } from '../db';
+import { getApiKey } from './apiKey';
 import { useCaseStore } from '../store/caseStore';
 
 
 // --- ATTENZIONE: SICUREZZA API KEY ---
-// La chiave API deve essere configurata come variabile d'ambiente (process.env.API_KEY).
 // NON INSERIRE LA CHIAVE DIRETTAMENTE NEL CODICE.
-// Questo previene l'esposizione accidentale della chiave in repository pubblici.
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY is not defined in environment variables. Please set it up to run the application.");
-}
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// La chiave la inserisce l'admin dall'interfaccia e vive nella tabella
+// `settings` del database; una chiave da ambiente, se fornita a chi compila,
+// vince su quella salvata. Vedi services/apiKey.ts.
+//
+// Il client si costruisce alla prima chiamata e non al caricamento del modulo:
+// altrimenti l'applicazione non parte quando la chiave manca, e senza avviarsi
+// non c'e' modo di inserirla.
+let client: GoogleGenAI | null = null;
+let clientKey: string | null = null;
+
+const getClient = async (): Promise<GoogleGenAI> => {
+    const key = await getApiKey();
+    if (!key) {
+        throw new Error('Chiave API non configurata. Inseriscila dal pannello di amministrazione.');
+    }
+    if (!client || clientKey !== key) {
+        client = new GoogleGenAI({ apiKey: key });
+        clientKey = key;
+    }
+    return client;
+};
 
 
 // The initial hardcoded list remains as a fallback/bootstrap
@@ -119,7 +135,7 @@ const fetchCoordinatesForCity = async (cityName: string, context?: string): Prom
     }
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await (await getClient()).models.generateContent({
             model: aiModel,
             contents: prompt,
             config: {
@@ -367,7 +383,7 @@ ${JSON.stringify(existingCases.map(c => ({ caseID: c.caseID, title: c.summary.ti
     
     promptToUse += profileSection;
 
-    const response = await ai.models.generateContent({
+    const response = await (await getClient()).models.generateContent({
         model: aiModel,
         contents: promptToUse,
         config: {
@@ -519,7 +535,7 @@ export const analyzeSingleUrl = async (url: string, existingCases: CaseData[]): 
         \`\`\`
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await (await getClient()).models.generateContent({
         model: aiModel,
         contents: prompt,
         config: {
@@ -627,7 +643,7 @@ export const updateCaseDetails = async (caseData: CaseData): Promise<Partial<Cas
         \`\`\`
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await (await getClient()).models.generateContent({
         model: aiModel,
         contents: prompt,
         config: {
@@ -756,7 +772,7 @@ export const generateDeepDiveReport = async (caseData: CaseData): Promise<DeepDi
     const { aiModel } = useCaseStore.getState();
     const filledPrompt = deepDiveReportPrompt.replace('CASE_DATA_PLACEHOLDER', JSON.stringify(caseData, null, 2));
 
-    const response = await ai.models.generateContent({
+    const response = await (await getClient()).models.generateContent({
         model: aiModel,
         contents: filledPrompt,
         config: {
@@ -862,7 +878,7 @@ export const reviseSearchPrompt = async (
       4.  **OUTPUT:** Restituisci **SOLO ED ESCLUSIVAMENTE** il testo completo del nuovo prompt ottimizzato, senza alcun commento o testo aggiuntivo.
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await (await getClient()).models.generateContent({
         model: aiModel,
         contents: prompt,
     });
@@ -892,7 +908,7 @@ export const translateReport = async (reportContent: string): Promise<string> =>
         ---
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await (await getClient()).models.generateContent({
         model: aiModel,
         contents: prompt,
     });

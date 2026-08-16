@@ -1,7 +1,6 @@
 
-import React, { useContext } from 'react';
+import React from 'react';
 import { useCaseStore } from '../store/caseStore';
-import { ThemeContext } from '../contexts/ThemeContext';
 import PulsingTriangle from './icons/PulsingTriangle';
 
 const availableModels = [
@@ -11,8 +10,7 @@ const availableModels = [
 
 const ModelSelectorModal: React.FC = () => {
     const { isModelSelectorOpen, setIsModelSelectorOpen, aiModel, setAiModel } = useCaseStore();
-    const { theme } = useContext(ThemeContext);
-
+    
     if (!isModelSelectorOpen) {
         return null;
     }
@@ -22,24 +20,24 @@ const ModelSelectorModal: React.FC = () => {
         setIsModelSelectorOpen(false);
     };
     
-    const modalBg = theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-zinc-300';
-    const textColor = theme === 'dark' ? 'text-white' : 'text-black';
-    const mutedTextColor = theme === 'dark' ? 'text-gray-400' : 'text-zinc-500';
-    const itemHoverBg = theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-zinc-100';
-    const selectedItemRing = theme === 'dark' ? 'ring-red-500' : 'ring-red-600';
-    const closeButtonBg = theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-zinc-200 hover:bg-zinc-300';
+    const modalBg = 'sam-panel';
+    const textColor = 'sam-fg';
+    const mutedTextColor = 'sam-muted';
+    const itemHoverBg = 'sam-row';
+    const selectedItemRing = 'sam-glow-threat';
+    const closeButtonBg = 'sam-action sam-action-ghost';
 
     return (
         <div 
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm"
+            className="sam-scrim fixed inset-0 z-[2000] flex items-center justify-center"
             onClick={() => setIsModelSelectorOpen(false)}
         >
             <div
-                className={`w-full max-w-md m-4 p-4 rounded-lg border shadow-lg ${modalBg} ${textColor} flex flex-col font-mono`}
+                className={`w-full max-w-md m-4 p-4 border ${modalBg} ${textColor} flex flex-col font-mono`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center mb-4">
-                    <PulsingTriangle className="w-5 h-5 text-red-500 mr-3" staticPulse />
+                    <PulsingTriangle className="w-5 h-5 sam-threat mr-3" staticPulse />
                     <h2 className="text-xl tracking-wider">SELEZIONA MODELLO AI</h2>
                 </div>
                 
@@ -52,8 +50,8 @@ const ModelSelectorModal: React.FC = () => {
                         <div
                             key={model.id}
                             onClick={() => handleSelectModel(model.id)}
-                            className={`p-3 border rounded-md cursor-pointer transition-all duration-200 ${itemHoverBg} ${
-                                aiModel === model.id ? `ring-2 ${selectedItemRing}` : (theme === 'dark' ? 'border-gray-700' : 'border-zinc-200')
+                            className={`p-3 border  cursor-pointer transition-all duration-200 ${itemHoverBg} ${
+                                aiModel === model.id ? `ring-2 ${selectedItemRing}` : ('sam-edge')
                             }`}
                         >
                             <p className="font-bold text-base">{model.name}</p>
@@ -64,7 +62,7 @@ const ModelSelectorModal: React.FC = () => {
 
                 <button 
                     onClick={() => setIsModelSelectorOpen(false)}
-                    className={`mt-6 w-full p-2 rounded-md font-mono tracking-widest text-sm transition-colors ${closeButtonBg}`}
+                    className={`mt-6 w-full p-2 font-mono tracking-widest text-sm transition-colors ${closeButtonBg}`}
                 >
                     CHIUDI
                 </button>

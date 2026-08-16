@@ -1,6 +1,5 @@
 
-import React, { useState, useEffect, useContext } from 'react';
-import { ThemeContext } from '../contexts/ThemeContext';
+import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import PulsingTriangle from './icons/PulsingTriangle';
@@ -11,8 +10,7 @@ interface DocsModalProps {
 }
 
 const DocsModal: React.FC<DocsModalProps> = ({ docInfo, onClose }) => {
-    const { theme } = useContext(ThemeContext);
-    const [content, setContent] = useState('');
+        const [content, setContent] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -35,30 +33,30 @@ const DocsModal: React.FC<DocsModalProps> = ({ docInfo, onClose }) => {
             });
     }, [docInfo.doc]);
 
-    const modalBg = theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-zinc-200';
-    const textColor = theme === 'dark' ? 'text-white' : 'text-black';
-    const closeButtonBg = theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-zinc-200 hover:bg-zinc-300';
-    const contentBg = theme === 'dark' ? 'bg-black/20' : 'bg-zinc-100/50';
-    const contentBorder = theme === 'dark' ? 'border-gray-700' : 'border-zinc-300';
+    const modalBg = 'sam-panel';
+    const textColor = 'sam-fg';
+    const closeButtonBg = 'sam-action sam-action-ghost';
+    const contentBg = '';
+    const contentBorder = 'sam-edge';
 
     return (
         <div 
-            className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center backdrop-blur-sm"
+            className="sam-scrim fixed inset-0 z-[1900] flex items-center justify-center"
             onClick={onClose}
         >
             <div
-                className={`w-full max-w-3xl h-[85vh] m-4 p-4 rounded-lg border shadow-lg ${modalBg} ${textColor} flex flex-col font-sans`}
+                className={`w-full max-w-3xl h-[85vh] m-4 p-4 border ${modalBg} ${textColor} flex flex-col font-sans`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between mb-4 flex-shrink-0">
                     <h2 className="text-xl font-mono tracking-wider">{docInfo.title}</h2>
-                    <button onClick={onClose} className={`px-3 py-1 rounded-md text-sm font-mono ${closeButtonBg}`}>CHIUDI</button>
+                    <button onClick={onClose} className={`px-3 py-1 text-sm font-mono ${closeButtonBg}`}>CHIUDI</button>
                 </div>
                 
-                <div className={`flex-grow overflow-y-auto feed-scrollbar p-4 border rounded-md ${contentBg} ${contentBorder}`}>
+                <div className={`flex-grow overflow-y-auto feed-scrollbar p-4 border ${contentBg} ${contentBorder}`}>
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                           <PulsingTriangle className="w-8 h-8 text-red-500 mb-4" />
+                        <div className="flex flex-col items-center justify-center h-full sam-muted">
+                           <PulsingTriangle className="w-8 h-8 sam-threat mb-4" />
                            <p>Caricamento del documento...</p>
                         </div>
                     ) : (

@@ -1,6 +1,5 @@
 
-import React, { useContext } from 'react';
-import { ThemeContext } from '../contexts/ThemeContext';
+import React from 'react';
 import PulsingTriangle from './icons/PulsingTriangle';
 import type { UserFeedback } from '../types';
 
@@ -10,27 +9,26 @@ interface ArchiveOptionsModalProps {
 }
 
 const ArchiveOptionsModal: React.FC<ArchiveOptionsModalProps> = ({ onArchive, onCancel }) => {
-    const { theme } = useContext(ThemeContext);
-
-    const modalBg = theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-zinc-300';
-    const textColor = theme === 'dark' ? 'text-white' : 'text-black';
-    const mutedTextColor = theme === 'dark' ? 'text-gray-400' : 'text-zinc-500';
-    const buttonClass = theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-zinc-200 hover:bg-zinc-300';
-    const optionButtonClass = `w-full text-left p-4 border rounded-md transition-colors`;
-    const optionButtonTheme = theme === 'dark' ? 'border-gray-700 hover:bg-gray-800' : 'border-zinc-300 hover:bg-zinc-100';
+    
+    const modalBg = 'sam-panel';
+    const textColor = 'sam-fg';
+    const mutedTextColor = 'sam-muted';
+    const buttonClass = 'sam-action sam-action-ghost';
+    const optionButtonClass = `w-full text-left p-4 border  transition-colors`;
+    const optionButtonTheme = 'sam-edge sam-row';
 
 
     return (
         <div 
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm"
+            className="sam-scrim fixed inset-0 z-[2000] flex items-center justify-center"
             onClick={onCancel}
         >
             <div
-                className={`w-full max-w-lg m-4 p-6 rounded-lg border shadow-lg ${modalBg} ${textColor} flex flex-col font-mono`}
+                className={`w-full max-w-lg m-4 p-6 border ${modalBg} ${textColor} flex flex-col font-mono`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center mb-4">
-                    <PulsingTriangle className="w-5 h-5 text-red-500 mr-3" staticPulse />
+                    <PulsingTriangle className="w-5 h-5 sam-threat mr-3" staticPulse />
                     <h2 className="text-xl tracking-wider">ARCHIVIA CASO</h2>
                 </div>
                 
@@ -81,7 +79,7 @@ const ArchiveOptionsModal: React.FC<ArchiveOptionsModalProps> = ({ onArchive, on
 
                 <button 
                     onClick={onCancel}
-                    className={`mt-6 w-full p-2 rounded-md font-mono tracking-widest text-sm transition-colors ${buttonClass}`}
+                    className={`mt-6 w-full p-2 font-mono tracking-widest text-sm transition-colors ${buttonClass}`}
                 >
                     ANNULLA
                 </button>

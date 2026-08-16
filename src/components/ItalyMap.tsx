@@ -1,8 +1,22 @@
 import React, { useEffect, useRef, useContext, useState } from 'react';
 import L from 'leaflet';
-import type { Map as LeafletMap, TileLayer, CircleMarker, GeoJSON } from 'leaflet';
+import type { Map as LeafletMap, TileLayer, Marker, GeoJSON } from 'leaflet';
 import type { CaseData } from '../types';
 import { ThemeContext } from '../contexts/ThemeContext';
+
+// I casi sulla mappa sono quadrati con alone, non pallini: il tondo e' escluso
+// dalla direzione Samaritan, salvo la spia di registrazione.
+const samThreat = 'rgba(255, 0, 0, 0.8)';
+
+const samSquare = (size: number, primary: boolean) =>
+  L.divIcon({
+    className: '',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `<div style="width:${size}px;height:${size}px;border:2px solid ${samThreat};`
+      + `background:${primary ? samThreat : 'transparent'};`
+      + `box-shadow:0 0 ${primary ? 15 : 5}px ${samThreat};"></div>`,
+  });
 
 interface ItalyMapProps {
   cases: CaseData[];
@@ -13,7 +27,7 @@ interface ItalyMapProps {
 const ItalyMap: React.FC<ItalyMapProps> = ({ cases, onSelectCase, selectedCaseId }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<LeafletMap | null>(null);
-  const markersRef = useRef<CircleMarker[]>([]);
+  const markersRef = useRef<Marker[]>([]);
   const tileLayerRef = useRef<TileLayer | null>(null);
   const regionLayerRef = useRef<GeoJSON | null>(null);
   const [regionGeoJson, setRegionGeoJson] = useState<any>(null);
@@ -94,7 +108,7 @@ const ItalyMap: React.FC<ItalyMapProps> = ({ cases, onSelectCase, selectedCaseId
           const regionData = { type: "FeatureCollection", features: featuresToDraw };
           regionLayerRef.current = L.geoJSON(regionData as any, {
             style: {
-              color: theme === 'dark' ? '#ff0000' : '#b91c1c',
+              color: samThreat,
               weight: 2,
               opacity: 0.8,
               fill: false,
@@ -108,17 +122,13 @@ const ItalyMap: React.FC<ItalyMapProps> = ({ cases, onSelectCase, selectedCaseId
       // Draw city markers
       const locations = selectedCase.summary?.location?.cities;
       if (locations && locations.length > 0) {
-        const caseMarkers: CircleMarker[] = [];
+        const caseMarkers: Marker[] = [];
         
         // Secondary markers
         locations.slice(1).forEach(loc => {
           if (loc.coords) {
-            const marker = L.circleMarker([loc.coords.lat, loc.coords.lng], {
-              radius: 5,
-              color: theme === 'dark' ? '#ff0000' : '#cc0000',
-              fillColor: theme === 'dark' ? '#ff0000' : '#cc0000',
-              fillOpacity: 0.7,
-              weight: 1,
+            const marker = L.marker([loc.coords.lat, loc.coords.lng], {
+              icon: samSquare(8, false),
             }).addTo(map);
             marker.on('click', () => onSelectCase(selectedCase));
             marker.bindPopup(`<div class="font-sans text-sm">Località secondaria: ${loc.name}<br><strong>Caso: ${selectedCase.summary.title}</strong></div>`);
@@ -129,16 +139,11 @@ const ItalyMap: React.FC<ItalyMapProps> = ({ cases, onSelectCase, selectedCaseId
         // Primary marker
         const primaryLocation = locations[0];
         if (primaryLocation.coords) {
-          const marker = L.circleMarker([primaryLocation.coords.lat, primaryLocation.coords.lng], {
-            radius: 12,
-            color: theme === 'dark' ? '#fca5a5' : '#ef4444',
-            fillColor: theme === 'dark' ? '#fca5a5' : '#ef4444',
-            fillOpacity: 1,
-            weight: 3,
+          const marker = L.marker([primaryLocation.coords.lat, primaryLocation.coords.lng], {
+            icon: samSquare(16, true),
           }).addTo(map);
           marker.on('click', () => onSelectCase(selectedCase));
           marker.bindPopup(`<div class="font-sans text-base">${selectedCase.summary.title}</div>`);
-          marker.bringToFront();
           caseMarkers.unshift(marker);
 
           // Pan view to primary marker

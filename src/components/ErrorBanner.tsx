@@ -1,7 +1,6 @@
 
 
-import React, { useContext } from 'react';
-import { ThemeContext } from '../contexts/ThemeContext';
+import React from 'react';
 
 interface ErrorBannerProps {
   message: string;
@@ -9,15 +8,14 @@ interface ErrorBannerProps {
 }
 
 const ErrorBanner: React.FC<ErrorBannerProps> = ({ message, onDismiss }) => {
-  const { theme } = useContext(ThemeContext);
-
-  const bgColor = theme === 'dark' ? 'bg-red-900/80 border-red-700' : 'bg-red-100 border-red-300';
-  const textColor = theme === 'dark' ? 'text-red-200' : 'text-red-800';
-  const buttonColor = theme === 'dark' ? 'text-red-200 hover:text-white' : 'text-red-600 hover:text-red-900';
+  
+  const bgColor = 'sam-edge sam-edge-threat';
+  const textColor = 'sam-threat';
+  const buttonColor = 'sam-threat';
 
   return (
     <div
-      className={`w-full p-3 mb-2 border ${bgColor} ${textColor} flex items-center justify-between rounded-md shadow-lg transition-all duration-300`}
+      className={`w-full p-3 mb-2 border ${bgColor} ${textColor} flex items-center justify-between transition-all duration-300`}
       role="alert"
     >
       <div className="flex items-center">
@@ -29,7 +27,7 @@ const ErrorBanner: React.FC<ErrorBannerProps> = ({ message, onDismiss }) => {
       <button
         onClick={onDismiss}
         aria-label="Dismiss error message"
-        className={`p-1 rounded-full transition-colors ${buttonColor}`}
+        className={`p-1 transition-colors ${buttonColor}`}
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

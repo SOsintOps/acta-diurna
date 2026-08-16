@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { CaseData } from '../types';
 import AnimatedText from './AnimatedText';
 import PulsingTriangle from './icons/PulsingTriangle';
-import { ThemeContext } from '../contexts/ThemeContext';
 import StarIcon from './icons/StarIcon';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -23,10 +22,9 @@ interface CaseDetailProps {
 }
 
 const DetailSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
-    const { theme } = useContext(ThemeContext);
-    const borderClass = theme === 'dark' ? 'border-gray-800' : 'border-zinc-300';
-    const headerBgClass = theme === 'dark' ? 'bg-gray-900' : 'bg-zinc-200';
-    const headerTextClass = theme === 'dark' ? 'text-gray-400' : 'text-zinc-500';
+        const borderClass = 'sam-edge';
+    const headerBgClass = 'sam-tab-active';
+    const headerTextClass = 'sam-muted';
 
     return (
         <div className={`border ${borderClass} mb-2`}>
@@ -37,18 +35,14 @@ const DetailSection: React.FC<{ title: string; children: React.ReactNode }> = ({
 };
 
 const ActionButton: React.FC<{ onClick: () => void; disabled: boolean; children: React.ReactNode; className?: string }> = ({ onClick, disabled, children, className = '' }) => {
-    const { theme } = useContext(ThemeContext);
-    const baseClass = 'w-full text-left p-2 text-sm font-mono tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center';
-    const themeClass = theme === 'dark'
-        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300 disabled:hover:bg-gray-800'
-        : 'bg-zinc-200 hover:bg-zinc-300 text-zinc-700 disabled:hover:bg-zinc-200';
+        const baseClass = 'w-full text-left p-2 text-sm font-mono tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center';
+    const themeClass = 'sam-action';
     return <button onClick={onClick} disabled={disabled} className={`${baseClass} ${themeClass} ${className}`}>{children}</button>;
 };
 
 
 const CaseDetail: React.FC<CaseDetailProps> = ({ appVersion, caseData, onUpdateCase, onGenerateReport, onArchiveCase, onMarkAsImportant, activeAction, report, onClearReport, onShowReport }) => {
-    const { theme } = useContext(ThemeContext);
-    const [title, setTitle] = useState('');
+        const [title, setTitle] = useState('');
     const [showContent, setShowContent] = useState(false);
     const [isTranslating, setIsTranslating] = useState(false);
     
@@ -165,14 +159,14 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
         }
     };
 
-    const borderClass = theme === 'dark' ? 'border-gray-800' : 'border-zinc-300';
-    const mutedTextClass = theme === 'dark' ? 'text-gray-600' : 'text-zinc-400';
-    const strongMutedTextClass = theme === 'dark' ? 'text-gray-400' : 'text-zinc-500';
-    const redTextClass = theme === 'dark' ? 'text-red-400' : 'text-red-600';
-    const reportBgClass = theme === 'dark' ? 'bg-black/20' : 'bg-zinc-100/50';
-    const reportBorderClass = theme === 'dark' ? 'border-gray-700' : 'border-zinc-300';
-    const warningBannerBg = theme === 'dark' ? 'bg-yellow-900/40 border-yellow-700/60' : 'bg-yellow-50 border-yellow-300';
-    const warningBannerText = theme === 'dark' ? 'text-yellow-300' : 'text-yellow-800';
+    const borderClass = 'sam-edge';
+    const mutedTextClass = 'sam-muted';
+    const strongMutedTextClass = 'sam-muted';
+    const redTextClass = 'sam-threat';
+    const reportBgClass = '';
+    const reportBorderClass = 'sam-edge';
+    const warningBannerBg = 'sam-edge sam-edge-warn';
+    const warningBannerText = 'sam-warn';
 
 
     if (!caseData) {
@@ -188,14 +182,14 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
         return (
             <div className={`w-full h-full flex flex-col border ${borderClass} p-2`}>
                 <h2 className="text-2xl font-medium mb-2 flex-shrink-0 font-mono tracking-wider">APPROFONDIMENTO</h2>
-                <div className={`flex-grow overflow-y-auto feed-scrollbar ${reportBgClass} p-4 border ${reportBorderClass} rounded mb-2 report-content`}>
+                <div className={`flex-grow overflow-y-auto feed-scrollbar ${reportBgClass} p-4 border ${reportBorderClass} mb-2 report-content`}>
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.content}</ReactMarkdown>
                 </div>
                 <div className="flex-shrink-0 grid grid-cols-2 gap-2">
                     <ActionButton
                         onClick={() => handleDownload(report.content, true, 'IT')}
                         disabled={isReporting || isTranslating}
-                        className={theme === 'dark' ? 'bg-red-700 hover:bg-red-600 text-white' : 'bg-red-600 hover:bg-red-700 text-white'}
+                        className={'sam-action sam-action-threat'}
                     >
                         SCARICA REPORT IT
                     </ActionButton>
@@ -243,17 +237,17 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
         <div className={`w-full h-full flex flex-col border ${borderClass} p-2 overflow-y-auto feed-scrollbar`}>
             <div className="flex-grow">
                 <div className="flex items-center mb-4">
-                    <PulsingTriangle className="w-6 h-6 text-red-600 mr-4" />
+                    <PulsingTriangle className="w-6 h-6 sam-threat mr-4" />
                     <div className="text-2xl font-medium flex-1 h-12 flex items-center">
                         {title && <AnimatedText text={title} mode="word" speed={100} onComplete={handleTitleAnimationComplete} />}
-                         {caseData.isImportant && <StarIcon className="w-5 h-5 text-yellow-400 ml-3 flex-shrink-0" />}
+                         {caseData.isImportant && <StarIcon className="w-5 h-5 sam-warn ml-3 flex-shrink-0" />}
                     </div>
                 </div>
 
                 {showContent && (
                     <div className="animate-fadeInUp">
                         {caseData.provenanceWarning && (
-                            <div className={`p-3 mb-2 border rounded-md flex items-start text-sm ${warningBannerBg} ${warningBannerText}`}>
+                            <div className={`p-3 mb-2 border flex items-start text-sm ${warningBannerBg} ${warningBannerText}`}>
                                 <WarningIcon className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
                                 <div>
                                     <strong className="font-bold">Attenzione: Fonti Non Verificate</strong>
@@ -286,9 +280,9 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
                                     {caseData.summary.crimeTypes.map((type, index) => (
                                        <span
                                             key={index}
-                                            className={`px-2 py-1 text-xs font-mono rounded ${
-                                            theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-zinc-200 text-zinc-700'
-                                            }`}
+                                            className={`px-2 py-1 text-xs font-mono ${
+ 'sam-chip'
+ }`}
                                         >
                                             {type.replace(/_/g, ' ')}
                                         </span>
@@ -344,7 +338,7 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
                                 {(caseData.provenance || []).map((p, i) => (
                                     <li key={i}>
                                         <span className={strongMutedTextClass}>{p.sourceType.toUpperCase()}:</span> 
-                                        <a href={p.url} target="_blank" rel="noopener noreferrer" className={`hover:underline ml-1 ${theme === 'dark' ? 'text-white hover:text-red-400' : 'text-zinc-900 hover:text-red-600'}`}>
+                                        <a href={p.url} target="_blank" rel="noopener noreferrer" className={`hover:underline ml-1 sam-link`}>
                                             {p.sourceName}
                                         </a>
                                     </li>
@@ -384,7 +378,7 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
                              <ActionButton
                                 onClick={() => onMarkAsImportant(caseData.caseID)}
                                 disabled={isArchived || isUpdating || isReporting}
-                                className={caseData.isImportant ? (theme === 'dark' ? 'bg-yellow-900/70 text-yellow-300 hover:bg-yellow-800/70' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200') : ''}
+                                className={caseData.isImportant ? 'sam-action sam-action-warn' : ''}
                             >
                                 {caseData.isImportant ? 'IMPORTANTE ✓' : 'IMPORTANTE'}
                             </ActionButton>

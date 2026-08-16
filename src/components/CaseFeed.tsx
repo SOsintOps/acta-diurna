@@ -1,9 +1,7 @@
 
 
-import React, { useContext, useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { CaseData } from '../types';
-import PulsingTriangle from './icons/PulsingTriangle';
-import { ThemeContext } from '../contexts/ThemeContext';
 import StarIcon from './icons/StarIcon';
 import WarningIcon from './icons/WarningIcon';
 
@@ -14,24 +12,22 @@ interface CaseRowProps {
 }
 
 const CaseRow: React.FC<CaseRowProps> = ({ caseItem, onSelectCase, isSelected }) => {
-    const { theme } = useContext(ThemeContext);
-    
     const isImportant = caseItem.isImportant;
     const isIrrelevant = caseItem.status === 'Archived';
 
     const getRowClass = () => {
         if (isSelected) {
-            return theme === 'dark' ? 'bg-red-900/50' : 'bg-red-100';
+            return 'sam-row-selected';
         }
-        return theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-zinc-200';
+        return 'sam-row';
     };
 
     // Define base text colors
-    const baseCaseIdColor = theme === 'dark' ? 'text-gray-500' : 'text-zinc-500';
-    const baseTitleColor = theme === 'dark' ? 'text-white' : 'text-zinc-800';
-    const baseLocationColor = theme === 'dark' ? 'text-gray-400' : 'text-zinc-600';
-    const selectedColor = theme === 'dark' ? 'text-red-400' : 'text-red-600';
-    const irrelevantColor = theme === 'dark' ? 'text-gray-600' : 'text-zinc-400';
+    const baseCaseIdColor = 'sam-muted';
+    const baseTitleColor = 'sam-fg';
+    const baseLocationColor = 'sam-muted';
+    const selectedColor = 'sam-threat';
+    const irrelevantColor = 'sam-muted';
 
     // Determine final classes, applying styles for irrelevant state unless selected
     const caseIdClass = isSelected ? selectedColor : (isIrrelevant ? irrelevantColor : baseCaseIdColor);
@@ -66,13 +62,13 @@ const CaseRow: React.FC<CaseRowProps> = ({ caseItem, onSelectCase, isSelected })
         <div
             onClick={() => onSelectCase(caseItem)}
             className={`
-              p-3 border-b ${theme === 'dark' ? 'border-gray-800' : 'border-zinc-300'} cursor-pointer transition-colors duration-200
-              flex items-start
-              ${getRowClass()}
-            `}
+ p-3 sam-divider cursor-pointer transition-colors duration-200
+ flex items-start
+ ${getRowClass()}
+ `}
         >
             <div className="w-4 h-4 mr-3 mt-1 flex-shrink-0">
-                {isSelected && <PulsingTriangle className="w-3 h-3 text-red-500" staticPulse />}
+                {isSelected && <div className="sam-rec sam-blink" style={{ width: 8, height: 8 }} />}
             </div>
             <div className="flex-grow overflow-hidden">
                 <div className="flex justify-between items-baseline">
@@ -85,10 +81,10 @@ const CaseRow: React.FC<CaseRowProps> = ({ caseItem, onSelectCase, isSelected })
                 </div>
 
                 <p className={`text-base leading-tight mt-1 flex items-center ${titleClass} ${isImportant ? 'font-bold' : ''}`}>
-                    {caseItem.isImportant && <StarIcon className="w-4 h-4 text-yellow-400 mr-2 flex-shrink-0" />}
+                    {caseItem.isImportant && <StarIcon className="w-4 h-4 sam-warn mr-2 flex-shrink-0" />}
                     {caseItem.provenanceWarning && (
                         <span title="Fonti non verificate automaticamente">
-                            <WarningIcon className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
+                            <WarningIcon className="w-4 h-4 sam-warn mr-2 flex-shrink-0" />
                         </span>
                     )}
                     <span className="flex-grow">{caseItem.summary.title}</span>
@@ -113,17 +109,16 @@ interface CaseFeedProps {
 type FeedTab = 'unread' | 'important' | 'irrelevant' | 'all';
 
 const CaseFeed: React.FC<CaseFeedProps> = ({ cases, onSelectCase, selectedCaseId }) => {
-  const { theme } = useContext(ThemeContext);
   const [activeTab, setActiveTab] = useState<FeedTab>('unread');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
 
-  const borderClass = theme === 'dark' ? 'border-gray-800' : 'border-zinc-300';
-  const headerTextClass = theme === 'dark' ? 'text-gray-300' : 'text-zinc-600';
+  const borderClass = 'sam-edge';
+  const headerTextClass = 'sam-muted';
   const tabBaseClass = `px-3 py-1.5 text-xs font-mono tracking-wider transition-colors duration-200 w-full text-center`;
-  const tabActiveClass = theme === 'dark' ? 'bg-gray-700 text-white' : 'bg-zinc-300 text-black';
-  const tabInactiveClass = theme === 'dark' ? 'bg-gray-900 text-gray-400 hover:bg-gray-800' : 'bg-zinc-200 text-zinc-500 hover:bg-zinc-300';
-  const inputClass = theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-zinc-300 text-black';
+  const tabActiveClass = 'sam-tab-active';
+  const tabInactiveClass = 'sam-tab';
+  const inputClass = 'sam-field';
 
   const filteredCases = useMemo(() => {
     return cases.filter(c => {
@@ -188,17 +183,17 @@ const CaseFeed: React.FC<CaseFeedProps> = ({ cases, onSelectCase, selectedCaseId
             placeholder="Cerca in tutti i campi..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`flex-grow p-1 px-2 text-sm font-mono border rounded ${inputClass}`}
+            className={`flex-grow p-1 px-2 text-sm font-mono border ${inputClass}`}
           />
           <input
             type="date"
             value={filterDate}
             onChange={(e) => setFilterDate(e.target.value)}
-            className={`p-1 px-2 text-sm font-mono border rounded ${inputClass}`}
+            className={`p-1 px-2 text-sm font-mono border ${inputClass}`}
           />
           <button
             onClick={() => { setFilterDate(''); setSearchTerm(''); }}
-            className="flex-shrink-0 px-3 py-1 text-sm font-mono bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+            className="flex-shrink-0 px-3 py-1 text-sm font-mono sam-action sam-action-threat transition-colors"
           >
             RESET
           </button>

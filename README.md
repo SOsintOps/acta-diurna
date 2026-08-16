@@ -1,6 +1,6 @@
 # Acta Diurna
 
-![Versione](https://img.shields.io/badge/version-0.1.0-blue.svg)
+![Versione](https://img.shields.io/badge/version-0.2.0-blue.svg)
 ![Licenza](https://img.shields.io/badge/license-MIT-green.svg)
 
 **Dashboard OSINT per monitorare e analizzare le notizie sulle operazioni delle forze dell'ordine in Italia.**
@@ -62,13 +62,21 @@ Gemini per l'analisi.
   fondendo casi, impostazioni e cronologia di apprendimento provenienti da più
   analisti. I backup di versioni precedenti vengono migrati automaticamente.
 
-- **Documentazione integrata**, accessibile dal menu «?», e tema chiaro/scuro.
+- **Documentazione integrata**, accessibile dal menu «?».
+
+- **Interfaccia in direzione Samaritan.** Filo di 2px, spigolo vivo, nessun
+  angolo arrotondato e nessuna ombra morbida: il bagliore è del colore stesso,
+  perché l'interfaccia emette luce invece di riceverla. Il rosso è riservato
+  alla minaccia. Il commutatore in alto a destra non accende un tema chiaro: è
+  l'inversione da nero quasi puro a bianco quasi puro, lenta due secondi.
 
 ## Requisiti
 
 - **Node.js 20** o successivo
-- Una **chiave API di Google Gemini** ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)).
-  Il piano gratuito è sufficiente per provare l'applicazione.
+- Una **chiave API di Google Gemini** ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)),
+  da inserire dall'interfaccia al primo avvio. Il piano gratuito è sufficiente
+  per provare l'applicazione. Senza chiave l'applicazione parte lo stesso e
+  l'archivio resta consultabile, ma non può analizzare nulla.
 - Un browser recente con supporto a IndexedDB
 
 ## Installazione
@@ -79,20 +87,18 @@ cd acta-diurna
 npm install
 ```
 
-Configura la chiave API:
-
-```bash
-cp .env.example .env
-# apri .env e incolla la tua chiave in GEMINI_API_KEY
-```
-
 Avvia in sviluppo:
 
 ```bash
 npm run dev
 ```
 
-L'applicazione sarà disponibile su `http://localhost:5173`.
+L'applicazione sarà disponibile su `http://localhost:5173`. Al primo avvio
+chiede la chiave API: si incolla nella finestra che compare, e viene salvata nel
+database dell'applicazione su questo browser. Il pulsante **CHIAVE API**
+nell'intestazione la reimposta in qualsiasi momento.
+
+L'interfaccia mostra soltanto se una chiave è presente, mai il suo valore.
 
 Per una build di produzione:
 
@@ -101,11 +107,19 @@ npm run build     # genera dist/
 npm run preview   # serve dist/ in locale per verifica
 ```
 
-> **Attenzione alla chiave.** La chiave viene iniettata nel bundle in fase di
-> compilazione, quindi **è leggibile da chiunque acceda a una build che
-> pubblichi online**. Usa Acta Diurna in locale, oppure dietro autenticazione su
-> una rete di cui hai il controllo. Il file `.env` è escluso dal versionamento e
-> non va mai committato.
+### La chiave a build time è facoltativa
+
+Chi compila può fornire una chiave in `.env`, copiando `.env.example`. In quel
+caso la chiave fa da **override**: vince su quella inserita dall'interfaccia, e
+l'interfaccia non permette di cambiarla.
+
+> **Attenzione.** Una chiave fornita in `.env` viene compilata **in chiaro
+> dentro il bundle JavaScript**, quindi è leggibile da chiunque acceda a una
+> build pubblicata online. Una build fatta così non va distribuita né esposta in
+> rete. Il file `.env` è escluso dal versionamento e non va mai committato.
+
+La chiave inserita dall'interfaccia resta nel database del browser. È molto
+meglio del bundle, ma non è protetta da chi ha accesso al profilo del browser.
 
 ## Come funziona
 
@@ -138,14 +152,22 @@ Tutte le dipendenze sono installate come pacchetti npm: l'applicazione non
 carica codice da CDN esterni. L'unica risorsa remota a runtime è il servizio di
 mappe (tile OpenStreetMap/CARTO), inevitabile per una mappa geografica.
 
+Il carattere è **Nova Mono** (Wojciech Kalinowski, SIL OFL 1.1), vendorizzato in
+`public/fonts/` con la licenza accanto. Non viene caricato da Google Fonts né da
+altri servizi remoti.
+
+I valori dell'interfaccia derivano da due ricostruzioni pubbliche, entrambe MIT:
+[poi-web-ui](https://github.com/Phreshhh/poi-web-ui) di Krisztián Kis e
+[Samaritan](https://github.com/goncalomb/Samaritan) di Gonçalo Baltazar.
+
 ## Documentazione
 
 | Documento | Contenuto |
 |---|---|
-| [Guida operativa](docs/help.md) | Metodo di lavoro per l'analista |
-| [FAQ](docs/FAQ.md) | Funzionamento, capacità e limiti |
-| [Cronologia versioni](docs/versions.md) | Cosa è cambiato e quando |
-| [Roadmap](docs/todo.md) | Funzionalità previste |
+| [Guida operativa](public/docs/help.md) | Metodo di lavoro per l'analista |
+| [FAQ](public/docs/FAQ.md) | Funzionamento, capacità e limiti |
+| [Cronologia versioni](public/docs/versions.md) | Cosa è cambiato e quando |
+| [Roadmap](public/docs/todo.md) | Funzionalità previste |
 
 ## Limiti noti
 

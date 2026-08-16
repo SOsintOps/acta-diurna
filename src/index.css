@@ -4,71 +4,365 @@
 
 /* Stili applicativi, estratti dal blocco <style> inline di index.html. */
 
-body {
-  background-color: #000;
-  color: #fff;
-  font-family: 'Helvetica', 'Arial', sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+/* --------------------------------------------------------------------------
+ * Carattere. Quello della serie e' FF Magda Clean Mono (Cornel Windlin, 1995,
+ * Monotype), commerciale: non redistribuibile in un repository MIT. Nova Mono
+ * e' monospaziato, SIL OFL 1.1, e la licenza sta in public/fonts/.
+ * Per passare a FF Magda basta cambiare --sam-font e i due @font-face.
+ * ----------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Nova Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/nova-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
 }
+@font-face {
+  font-family: 'Nova Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/nova-mono-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* --------------------------------------------------------------------------
+ * Gettoni di stile — direzione Samaritan.
+ *
+ * Unico punto in cui vivono i colori. Il difetto rilevato dall'audit era che
+ * stavano in ternari sparsi in venti componenti: qui si cambia una riga.
+ *
+ * Il tema chiaro non e' un tema chiaro: e' l'inversione di Samaritan, il
+ * passaggio da nero quasi puro a bianco quasi puro, lento due secondi.
+ *
+ * Valori derivati da due ricostruzioni pubbliche dell'interfaccia:
+ *   poi-web-ui  — MIT, Copyright (c) 2018 Krisztian Kis, Phresh-IT
+ *                 https://github.com/Phreshhh/poi-web-ui
+ *   Samaritan   — MIT, Copyright (c) 2014, 2016 Goncalo Baltazar
+ *                 https://github.com/goncalomb/Samaritan
+ * ----------------------------------------------------------------------- */
+:root {
+  --sam-bg: #060606;
+  --sam-fg: #ffffff;
+  --sam-line: #ffffff;
+  --sam-muted: #717171;
+
+  /* Classificazioni. Mai colore pieno: 0.8 di opacita', cosi' l'elemento
+     sembra sovrimpresso a un segnale video e non appoggiato a un foglio. */
+  --sam-threat: rgba(255, 0, 0, 0.8);
+  --sam-confirm: rgba(71, 255, 86, 0.8);
+  --sam-info: rgba(20, 140, 252, 0.8);
+  --sam-warn: rgba(229, 255, 0, 0.8);
+  --sam-second: rgba(247, 202, 3, 0.8);
+
+  --sam-font: 'Nova Mono', 'Courier New', monospace;
+  --sam-invert: 2000ms;
+}
+
 body.light-theme {
-  background-color: #f4f4f5; /* Zinc 100 */
-  color: #18181b; /* Zinc 900 */
+  --sam-bg: #f9f9f9;
+  --sam-fg: #060606;
+  --sam-line: #060606;
+}
+
+body {
+  background-color: var(--sam-bg);
+  color: var(--sam-fg);
+  font-family: var(--sam-font);
+  /* L'inversione e' lenta di proposito: e' il gesto piu' riconoscibile. */
+  transition: background-color var(--sam-invert) ease, color var(--sam-invert) ease;
 }
 
 .font-mono {
-  font-family: 'Courier New', 'Roboto Mono', monospace;
+  font-family: var(--sam-font);
+}
+
+/* --------------------------------------------------------------------------
+ * Componenti Samaritan.
+ *
+ * Regola unica: filo di 2px, spigolo vivo, nessun raggio, nessuna ombra
+ * morbida. Il bagliore e' del colore stesso con scostamento zero, perche'
+ * l'interfaccia emette luce, non la riceve.
+ * ----------------------------------------------------------------------- */
+.sam-panel {
+  background-color: var(--sam-bg);
+  color: var(--sam-fg);
+  border: 2px solid var(--sam-line);
+  border-radius: 0;
+  padding: 5px;
+  text-transform: uppercase;
+  font-family: var(--sam-font);
+}
+
+/* La barra del titolo sborda dal riquadro invece di starci dentro: e' il
+   dettaglio piu' riconoscibile dei blocchi di Samaritan. */
+.sam-title {
+  display: block;
+  width: calc(100% + 14px);
+  margin: -5px -7px 0 -7px;
+  border: 2px solid var(--sam-line);
+  padding: 2px 6px;
+  text-align: center;
+  letter-spacing: 8px;
+  line-height: 1;
+}
+
+.sam-rule {
+  width: 30px;
+  border-bottom: 2px solid var(--sam-line);
+}
+
+/* Velo dietro le finestre: oscuramento pieno, mai sfocatura. */
+.sam-scrim { background-color: rgba(0, 0, 0, 0.85); }
+body.light-theme .sam-scrim { background-color: rgba(249, 249, 249, 0.9); }
+
+/* Bordo nudo, per i riquadri di impaginazione che non sono pannelli. */
+.sam-edge {
+  border: 2px solid var(--sam-line);
+  border-radius: 0;
+}
+
+.sam-field {
+  background-color: transparent;
+  color: var(--sam-fg);
+  border: 2px solid var(--sam-line);
+  border-radius: 0;
+  font-family: var(--sam-font);
+  letter-spacing: 2px;
+}
+.sam-field:focus {
+  outline: none;
+  box-shadow: 0 0 5px var(--sam-line);
+}
+
+/* Pulsanti pieni: fondo compatto, testo invertito, spigolo vivo.
+ *
+ * `text-indent` compensa lo spazio che `letter-spacing` aggiunge anche dopo
+ * l'ultima lettera: senza, il testo risulta spostato a sinistra dentro il
+ * pulsante e sembra non centrato.
+ */
+.sam-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  background-color: var(--sam-line);
+  color: var(--sam-bg);
+  border: 2px solid var(--sam-line);
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  text-indent: 4px;
+  line-height: 1.2;
+  transition: background-color 200ms, color 200ms, box-shadow 200ms;
+}
+.sam-action:hover:not(:disabled) {
+  box-shadow: 0 0 15px var(--sam-line);
+}
+.sam-action:disabled {
+  background-color: var(--sam-muted);
+  border-color: var(--sam-muted);
+  color: var(--sam-bg);
+}
+
+.sam-action-threat {
+  background-color: var(--sam-threat);
+  border-color: var(--sam-threat);
+  color: var(--sam-bg);
+}
+.sam-action-threat:hover:not(:disabled) {
+  box-shadow: 0 0 15px var(--sam-threat);
+}
+
+/* I comandi secondari di Samaritan sono arancioni, non blu. */
+.sam-action-second {
+  background-color: var(--sam-second);
+  border-color: var(--sam-second);
+  color: var(--sam-bg);
+}
+.sam-action-second:hover:not(:disabled) {
+  box-shadow: 0 0 15px var(--sam-second);
+}
+
+/* Spaziatura ridotta per i comandi in barra, dove servono cinque pulsanti
+   sulla stessa riga. Il rientro segue la spaziatura, altrimenti il testo
+   torna fuori centro. */
+.sam-action-compact {
+  letter-spacing: 2px;
+  text-indent: 2px;
+}
+
+/* Variante vuota, per i comandi di chiusura e le azioni di contorno, dove
+   un pulsante pieno peserebbe quanto quello principale. */
+.sam-action-ghost {
+  background-color: transparent;
+  color: var(--sam-fg);
+  border-color: var(--sam-line);
+}
+.sam-action-ghost:hover:not(:disabled) {
+  background-color: var(--sam-line);
+  color: var(--sam-bg);
+}
+.sam-action-ghost:disabled {
+  background-color: transparent;
+  color: var(--sam-muted);
+}
+
+.sam-glow-threat { box-shadow: 0 0 5px var(--sam-threat); }
+.sam-glow-line { box-shadow: 0 0 5px var(--sam-line); }
+
+.sam-threat { color: var(--sam-threat); }
+.sam-confirm { color: var(--sam-confirm); }
+.sam-muted { color: var(--sam-muted); }
+
+/* Etichetta di stato: chip invertito, valore in rosso con alone spostato. */
+.sam-status {
+  background-color: var(--sam-fg);
+  color: var(--sam-bg);
+  padding: 0 5px;
+  letter-spacing: 2px;
+}
+.sam-status-value {
+  color: var(--sam-threat);
+  text-shadow: 2px 2px 5px var(--sam-threat);
+  padding: 0 5px;
+  letter-spacing: 2px;
+}
+
+/* Spia di registrazione: l'unico elemento tondo dell'intera interfaccia. */
+.sam-rec {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--sam-threat);
+  box-shadow: 0 0 15px var(--sam-threat);
+}
+
+@keyframes sam-fading {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.sam-blink { animation: sam-fading 0.5s infinite ease-in-out; }
+
+/* Il corpo del testo NON e' maiuscolo: il maiuscolo e' della cornice e delle
+   etichette. I nomi e i riassunti dei casi devono restare leggibili. */
+.sam-body {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.sam-fg { color: var(--sam-fg); }
+.sam-warn { color: var(--sam-warn); }
+.sam-second { color: var(--sam-second); }
+.sam-edge-warn { border-color: var(--sam-warn); }
+.sam-edge-threat { border-color: var(--sam-threat); }
+.sam-edge-second { border-color: var(--sam-second); }
+
+.sam-action-warn {
+  background-color: var(--sam-warn);
+  border-color: var(--sam-warn);
+  color: var(--sam-bg);
+}
+.sam-action-warn:hover:not(:disabled) {
+  box-shadow: 0 0 15px var(--sam-warn);
+}
+
+/* Etichetta di classificazione: filo sottile, mai fondo pieno. */
+.sam-chip {
+  border: 2px solid var(--sam-line);
+  border-radius: 0;
+  color: var(--sam-fg);
+  letter-spacing: 2px;
+}
+
+.sam-link {
+  color: var(--sam-fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sam-link:hover {
+  color: var(--sam-threat);
+  text-shadow: 0 0 5px var(--sam-threat);
+}
+
+/* Righe del feed: separate da un filo, mai da un fondo alternato. */
+.sam-divider { border-bottom: 2px solid var(--sam-line); }
+
+.sam-row:hover { background-color: rgba(127, 127, 127, 0.15); }
+.sam-row-selected {
+  background-color: transparent;
+  border-left: 4px solid var(--sam-threat);
+  box-shadow: inset 0 0 15px rgba(255, 0, 0, 0.25);
+}
+
+/* Schede: rettangoli affiancati, l'attiva e' invertita. */
+.sam-tab {
+  background-color: transparent;
+  color: var(--sam-muted);
+  border: 2px solid var(--sam-line);
+  border-radius: 0;
+}
+.sam-tab:hover { color: var(--sam-fg); }
+.sam-tab-active {
+  background-color: var(--sam-fg);
+  color: var(--sam-bg);
+  border: 2px solid var(--sam-line);
+  border-radius: 0;
 }
 /* Custom scrollbar for the feed */
 .feed-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
 .feed-scrollbar::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: transparent;
 }
 .feed-scrollbar::-webkit-scrollbar-thumb {
-  background: #ff0000;
-}
-body.light-theme .feed-scrollbar::-webkit-scrollbar-track {
-  background: #e4e4e7; /* Zinc 200 */
-}
-body.light-theme .feed-scrollbar::-webkit-scrollbar-thumb {
-  background: #dc2626; /* Red 600 */
+  background: var(--sam-threat);
 }
 
 .map-glow {
-  filter: drop-shadow(0 0 5px #ff0000) drop-shadow(0 0 10px #ff0000);
+  filter: drop-shadow(0 0 5px var(--sam-threat)) drop-shadow(0 0 10px var(--sam-threat));
 }
-/* Leaflet custom themes */
+
+/* Leaflet: la mappa deve sembrare un segnale, non una cartina. */
 .leaflet-container {
-  background: #000;
+  background: var(--sam-bg);
+  font-family: var(--sam-font);
 }
-body.light-theme .leaflet-container {
-  background: #e4e4e7; /* Zinc 200 */
-}
+.leaflet-control-attribution,
 .leaflet-control-attribution a {
-  color: #999;
-}
-body.light-theme .leaflet-control-attribution a {
-  color: #3f3f46; /* Zinc 700 */
+  color: var(--sam-muted);
 }
 .leaflet-control-attribution {
-  background: rgba(0,0,0,0.7) !important;
-  color: #999;
+  background: transparent !important;
+  font-size: 9px;
 }
-body.light-theme .leaflet-control-attribution {
-  background: rgba(255,255,255,0.7) !important;
-  color: #3f3f46; /* Zinc 700 */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--sam-bg);
+  color: var(--sam-fg);
+  border: 2px solid var(--sam-threat);
+  border-radius: 0;
+  box-shadow: 0 0 15px var(--sam-threat);
 }
-.leaflet-popup-content-wrapper, .leaflet-popup-tip {
-  background: #1a1a1a;
-  color: #fff;
-  border: 1px solid #ff0000;
+.leaflet-popup-content-wrapper { padding: 2px; }
+.leaflet-popup-close-button { color: var(--sam-fg) !important; }
+/* I controlli di zoom sono pulsanti quadrati, non pillole. */
+.leaflet-bar,
+.leaflet-bar a {
+  border-radius: 0 !important;
+  background: var(--sam-bg);
+  color: var(--sam-fg);
+  border-color: var(--sam-line);
 }
-body.light-theme .leaflet-popup-content-wrapper, body.light-theme .leaflet-popup-tip {
-  background: #fff;
-  color: #18181b; /* Zinc 900 */
-  border: 1px solid #d4d4d8; /* Zinc 300 */
-  box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+.leaflet-bar a:hover {
+  background: var(--sam-line);
+  color: var(--sam-bg);
 }
 
 /* Report content styling */
@@ -78,7 +372,7 @@ body.light-theme .leaflet-popup-content-wrapper, body.light-theme .leaflet-popup
   margin-top: 1rem;
   margin-bottom: 0.5rem;
   padding-bottom: 0.25rem;
-  border-bottom: 1px solid rgba(255, 0, 0, 0.5);
+  border-bottom: 2px solid var(--sam-threat);
 }
 .report-content ol {
   list-style-type: decimal;
@@ -98,13 +392,7 @@ body.light-theme .leaflet-popup-content-wrapper, body.light-theme .leaflet-popup
 }
 .report-content strong {
   font-weight: 600;
-  color: #ff0000;
-}
- body.light-theme .report-content h3 {
-  border-bottom-color: #ef4444; /* red-500 */
-}
-body.light-theme .report-content strong {
-  color: #b91c1c; /* red-700 */
+  color: var(--sam-threat);
 }
 
 /* Loading Animation */

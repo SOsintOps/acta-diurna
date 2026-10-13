@@ -1,6 +1,6 @@
 # Acta Diurna
 
-![Versione](https://img.shields.io/badge/version-0.2.0-blue.svg)
+![Versione](https://img.shields.io/badge/version-0.2.1-blue.svg)
 ![Licenza](https://img.shields.io/badge/license-MIT-green.svg)
 
 **Dashboard OSINT per monitorare e analizzare le notizie sulle operazioni delle forze dell'ordine in Italia.**
@@ -44,10 +44,19 @@ Gemini per l'analisi.
 - **Mappa interattiva.** I casi selezionati evidenziano le regioni coinvolte e
   localizzano le città interessate.
 
-- **Report allineati allo standard ICD 203.** Sintesi del *modus operandi*,
-  entità coinvolte e valutazione strategica, con livelli di confidenza espliciti,
-  distinzione fra fatti e ipotesi e identificazione delle lacune informative.
-  Traducibili in inglese professionale.
+- **Report di approfondimento strutturati.** Il prompt chiede al modello una
+  sintesi iniziale che risponde alla domanda, giudizi chiave espressi con i sette
+  termini di probabilità della prima riga della scala della direttiva
+  [ICD 203](https://www.dni.gov/files/documents/ICD/ICD-203.pdf) (in un glossario
+  italiano fisso) e un livello di fiducia dichiarato a parte, fatti accertati con
+  il voto 4x4 UNODC di ogni fonte, analisi del *modus operandi*, lacune e
+  tabella delle fonti. Il metodo è quello di
+  [Intelligence Field Notes](https://github.com/SOsintOps/intelligence-field-notes)
+  ([linguaggio della probabilità](https://github.com/SOsintOps/intelligence-field-notes/blob/main/docs/estimative-language.md),
+  [valutazione delle fonti](https://github.com/SOsintOps/intelligence-field-notes/blob/main/docs/source-evaluation.md),
+  [scrittura del report](https://github.com/SOsintOps/intelligence-field-notes/blob/main/docs/report-writing.md)).
+  Sono istruzioni date al modello, non controlli automatici: il rispetto delle
+  regole va verificato dall'analista. Traducibili in inglese professionale.
 
 - **Apprendimento dal feedback.** Marcare un caso come importante, o archiviarlo
   indicandone il motivo, alimenta la revisione periodica del profilo di ricerca

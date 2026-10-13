@@ -3,6 +3,22 @@
 
 Questa guida è pensata per un analista che si avvicina per la prima volta a Acta Diurna e risponde alle domande più comuni sul suo funzionamento, le sue capacità e l'affidabilità dei dati. Per un flusso di lavoro operativo, consulta la nostra **[Guida Operativa all'Analisi (help.md)](help.md)**.
 
+## Indice
+
+* [1. Cos'è Acta Diurna?](#1-cosè-acta-diurna)
+* [2. Da dove provengono i dati?](#2-da-dove-provengono-i-dati)
+* [3. Quanto sono affidabili le informazioni?](#3-quanto-sono-affidabili-le-informazioni)
+* [4. Come "impara" l'intelligenza artificiale?](#4-come-impara-lintelligenza-artificiale)
+* [5. Che differenza c'è tra "AGGIORNA" e "APPROFONDIMENTO"?](#5-che-differenza-cè-tra-aggiorna-e-approfondimento)
+* [6. Che differenza c'è tra "Sovrascrivi" e "Integra" durante l'importazione?](#6-che-differenza-cè-tra-sovrascrivi-e-integra-durante-limportazione)
+* [7. Cosa succede se importo un backup di una vecchia versione?](#7-cosa-succede-se-importo-un-backup-di-una-vecchia-versione)
+* [8. Posso perdere i miei dati?](#8-posso-perdere-i-miei-dati)
+* [9. Ho ricevuto un errore di "quota superata". Cosa faccio?](#9-ho-ricevuto-un-errore-di-quota-superata-cosa-faccio)
+* [10. Se l'IA impara, come posso controllare o ripristinare una vecchia "versione" delle sue istruzioni?](#10-se-lia-impara-come-posso-controllare-o-ripristinare-una-vecchia-versione-delle-sue-istruzioni)
+* [11. Perché una città non compariva sulla mappa?](#11-perché-una-città-non-compariva-sulla-mappa)
+* [12. Come esprimono i report la probabilità e l'affidabilità delle fonti?](#12-come-esprimono-i-report-la-probabilità-e-laffidabilità-delle-fonti)
+* [13. Esistono altri progetti collegati ad Acta Diurna?](#13-esistono-altri-progetti-collegati-ad-acta-diurna)
+
 ---
 
 ### 1. Cos'è Acta Diurna?
@@ -50,7 +66,7 @@ Le istruzioni di ricerca appena ottimizzate diventano il nuovo **profilo di rice
 ### 5. Che differenza c'è tra "AGGIORNA" e "APPROFONDIMENTO"?
 
 - **AGGIORNA:** Questa azione riesegue una ricerca mirata per il caso specifico, cercando di **completare o correggere** le informazioni già esistenti (es. trovare nomi mancanti, aggiornare il valore dei sequestri, aggiungere nuove fonti). È un'azione di arricchimento.
-- **APPROFONDIMENTO:** Questa azione genera un **report di analisi completamente nuovo**. L'IA sintetizza tutte le informazioni disponibili in un documento strutturato che include un'analisi del modus operandi, una valutazione strategica con livelli di confidenza, distinzione tra fatti e ipotesi, e identificazione delle lacune informative. È un'azione di sintesi e analisi professionale.
+- **APPROFONDIMENTO:** Questa azione genera un **report di analisi completamente nuovo**. L'IA sintetizza tutte le informazioni disponibili in un documento strutturato: sintesi iniziale, giudizi chiave con termini di probabilità e livello di fiducia, fatti accertati con la valutazione di ogni fonte, analisi del modus operandi, lacune informative e tabella delle fonti (vedi la domanda 12). È un'azione di sintesi e analisi professionale.
 
 ### 6. Che differenza c'è tra "Sovrascrivi" e "Integra" durante l'importazione?
 
@@ -96,3 +112,37 @@ In passato, il sistema poteva omettere una città se il suo nome era scritto in 
 2.  **Auto-Correzione Contestuale:** Se la prima ricerca fallisce, il sistema non si arrende. Invia una seconda richiesta all'IA, fornendole non solo il nome della città, ma anche il **contesto della notizia** (es. il titolo del caso). Questo permette all'IA di dedurre la località corretta anche in presenza di refusi o nomi di frazioni poco comuni (es. "Platì").
 
 Questo processo non solo trova le coordinate, ma **corregge anche il nome della città** con quello ufficiale, garantendo la massima accuratezza e completezza dei dati geografici sulla mappa.
+
+### 12. Come esprimono i report la probabilità e l'affidabilità delle fonti?
+
+Il report di approfondimento segue regole fisse di scrittura analitica, date al modello come istruzioni nel prompt:
+
+- **Probabilità.** I giudizi usano solo sette termini, tratti dalla prima riga della scala di probabilità della direttiva [ICD 203](https://www.dni.gov/files/documents/ICD/ICD-203.pdf) e resi con un glossario italiano fisso:
+
+| Termine | Intervallo |
+|---|---|
+| quasi nessuna possibilità | 01-05% |
+| molto improbabile | 05-20% |
+| improbabile | 20-45% |
+| probabilità pressoché pari | 45-55% |
+| probabile | 55-80% |
+| molto probabile | 80-95% |
+| quasi certo | 95-99% |
+
+- **Fiducia.** Il livello di fiducia (*alta*, *moderata*, *bassa*) dice quanto è solida la base del giudizio e sta sempre in una frase separata dal termine di probabilità. I tre livelli sono una convenzione diffusa, non una definizione della direttiva.
+- **Fatti.** I fatti accertati si scrivono senza qualificatori, con il riferimento alla fonte. Le ipotesi di reato restano contestazioni dell'accusa. Espressioni come "potrebbe", "sembrerebbe" o "si ritiene" sono escluse, salvo una condizione esplicita.
+- **Valutazione delle fonti.** Ogni fonte riceve il voto del sistema 4x4 dell'UNODC ([*Criminal Intelligence: Manual for Analysts*](https://www.unodc.org/documents/organized-crime/Law-Enforcement/Criminal_Intelligence_for_Analysts.pdf)): una lettera per l'affidabilità della fonte (A, B, C, X) e un numero per la validità dell'informazione (1-4). La fonte è chi ha prodotto l'informazione, non il sito che la ospita: un comunicato di Questura, Carabinieri, Guardia di Finanza o Procura, o un provvedimento giudiziario, è fonte A (informazione 1 per i dati che l'ente attesta, 2 per la ricostruzione dell'accusa); un articolo di testata che riprende il comunicato è fonte B (informazione 2 o 3); una voce non attribuita e non corroborata è X4. Dieci articoli che riprendono lo stesso comunicato contano come una fonte sola.
+
+Il metodo è descritto in dettaglio in [Intelligence Field Notes](https://github.com/SOsintOps/intelligence-field-notes), nelle pagine sul [linguaggio della probabilità](https://github.com/SOsintOps/intelligence-field-notes/blob/main/docs/estimative-language.md), sulla [valutazione delle fonti](https://github.com/SOsintOps/intelligence-field-notes/blob/main/docs/source-evaluation.md) e sulla [scrittura del report](https://github.com/SOsintOps/intelligence-field-notes/blob/main/docs/report-writing.md). Il modello può non rispettare le regole: la verifica resta compito dell'analista (vedi la [Guida Operativa](help.md)).
+
+### 13. Esistono altri progetti collegati ad Acta Diurna?
+
+Sì. Acta Diurna fa parte dei progetti open source di [SOsintOps](https://github.com/SOsintOps):
+
+- **[Intelligence Field Notes](https://github.com/SOsintOps/intelligence-field-notes)** (in inglese): la raccolta di riferimento su standard analitici, metodo OSINT, linguaggio della probabilità, valutazione delle fonti e scrittura del report. È la fonte delle regole usate nei report di Acta Diurna.
+- **[Elementary CTI](https://github.com/SOsintOps/elementary-CTI)**: aggregatore di threat intelligence sul ransomware, utile per seguire le vittime di attacchi ransomware in Italia quando un caso riguarda il crimine informatico.
+- **[Quaesitor](https://github.com/SOsintOps/quaesitor)**: grafo locale per indagini OSINT su persone, telefoni, account, società, veicoli e luoghi, con il metodo di analisi dei legami dell'UNODC. Serve per mettere in relazione le persone e le società che compaiono nei casi.
+- **[Aethelburg](https://github.com/SOsintOps/Aethelburg-project)**: piattaforma desktop per analizzare i dati del registro delle imprese britannico (Companies House) alla ricerca di società schermo e strutture societarie anomale. Utile quando un caso coinvolge società con sede nel Regno Unito.
+- **[Exploratores](https://github.com/SOsintOps/Exploratores)**: raccolta di strumenti OSINT nel browser per ricerche su persone, numeri di telefono, domini, immagini, società e piattaforme social, utile per gli approfondimenti manuali sulle entità di un caso.
+- **[Codex Machinae](https://github.com/SOsintOps/codex-machinae)** (in inglese): il playbook modulare per lo sviluppo di software con collaboratori LLM con cui viene gestito lo sviluppo di Acta Diurna.
+- **[Il Conclave](https://github.com/SOsintOps/il-conclave)**: una skill per Claude Code, in italiano, che sottopone una domanda o una decisione a procedure analitiche strutturate, tra cui l'analisi delle ipotesi concorrenti (ACH) e il premortem. Utile per mettere alla prova i giudizi di un report prima di usarli.

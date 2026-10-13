@@ -4,6 +4,55 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
 
 ---
 
+### Versione 0.2.1
+*Data: 2026-10-13*
+
+**Il report di approfondimento parla una lingua precisa**
+
+Il prompt del report di approfondimento è stato riscritto secondo il metodo di
+[Intelligence Field Notes](https://github.com/SOsintOps/intelligence-field-notes)
+sulla scrittura del report. La risposta viene prima: il report si apre con una
+**Sintesi (bottom line)** di 3-5 frasi che risponde alla domanda, seguita da
+**Giudizi chiave**, **Fatti accertati**, **Analisi** (modus operandi, ipotesi
+alternative, assunzioni chiave), **Lacune e prossimi passi**, una tabella delle
+**Fonti** e una nota su **Metodo e limiti**. Entità, dati geografici e verifiche
+con i sistemi interni passano in allegato.
+
+**Probabilità con un glossario fisso.** I giudizi usano solo i sette termini
+della prima riga della scala della direttiva
+[ICD 203](https://www.dni.gov/files/documents/ICD/ICD-203.pdf), resi in italiano
+sempre nello stesso modo: *quasi nessuna possibilità*, *molto improbabile*,
+*improbabile*, *probabilità pressoché pari*, *probabile*, *molto probabile*,
+*quasi certo*. Il livello di fiducia (*alta*, *moderata*, *bassa*) si dichiara in
+una frase separata. I fatti si scrivono senza qualificatori; "potrebbe",
+"sembrerebbe" e "si ritiene" sono esclusi salvo una condizione esplicita, e il
+condizionale giornalistico lascia il posto all'attribuzione esplicita. Le
+ipotesi di reato restano contestazioni dell'accusa.
+
+**Ogni fonte ha il suo voto.** I fatti riportano il voto 4x4 dell'UNODC della
+fonte, adattato alla stampa: comunicato di forze dell'ordine o Procura e
+provvedimento giudiziario come fonte A, articolo che li riprende come fonte B,
+voce non attribuita come X4. Più articoli che riprendono lo stesso comunicato
+contano come una fonte sola.
+
+**Documentazione**
+
+-   La [Guida Operativa](help.md) descrive la nuova struttura del report; il vecchio
+    esempio "È probabile che..." ora usa il glossario, con l'intervallo e il
+    livello di fiducia in una frase separata.
+-   Le [FAQ](FAQ.md) hanno un indice e due domande nuove: come i report esprimono
+    probabilità e affidabilità delle fonti, e quali progetti SOsintOps sono
+    collegati ad Acta Diurna.
+-   Il README descrive ciò che il prompt chiede davvero al modello, al posto di
+    un generico allineamento allo standard ICD 203.
+
+**Difetti corretti**
+
+-   Il disclaimer del report e quello dei casi esportati in RTF dicevano ancora
+    **POLICE CHRONICLE**. Ora dicono ACTA DIURNA.
+
+---
+
 ### Versione 0.2.0
 *Data: 2026-08-16*
 

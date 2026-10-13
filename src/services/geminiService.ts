@@ -720,32 +720,74 @@ export const updateCaseDetails = async (caseData: CaseData): Promise<Partial<Cas
 };
 
 const deepDiveReportPrompt = `
-Sei un analista di intelligence senior. Il tuo compito è generare un report di approfondimento completo e accurato, aderendo a standard professionali di analisi. I dati di partenza potrebbero essere incompleti.
+Sei un analista di intelligence senior specializzato in cronaca giudiziaria e attività delle forze dell'ordine in Italia. Il tuo compito è scrivere un report di approfondimento sul caso fornito, secondo le regole di scrittura analitica descritte qui sotto. I dati di partenza sono un punto di partenza e possono essere incompleti.
 
 **OBIETTIVO:**
-La tua missione è arricchire i dati del caso fornito. Crea un report investigativo che sintetizzi i fatti, identifichi i ruoli chiave, analizzi il modus operandi e fornisca una valutazione analitica rigorosa. Allo stesso tempo, estrai e struttura un elenco **aggiornato e completo** di tutte le persone e aziende coinvolte.
+Rispondi a una domanda precisa: che cosa è accaduto in questo caso, chi è coinvolto e che cosa significa. Il report è il prodotto: chi lo legge deve poter agire leggendo soltanto la prima sezione. Allo stesso tempo, estrai e struttura un elenco **aggiornato e completo** di tutte le persone e aziende coinvolte.
 
 **PROCESSO:**
 1.  Analizza i dati del caso fornito, considerandoli un punto di partenza.
-2.  Esegui una ricerca web approfondita per trovare dettagli aggiuntivi o mancanti nelle fonti originali e in nuove fonti.
+2.  Esegui una ricerca web approfondita per trovare dettagli aggiuntivi o mancanti nelle fonti originali e in nuove fonti. Risali sempre all'origine di ogni informazione: comunicato stampa, provvedimento, articolo.
 3.  Sintetizza TUTTE le informazioni (quelle iniziali e quelle nuove) nel campo \`reportContent\`, formattando il testo esclusivamente in **Markdown**.
-4.  Nel corpo del report, includi un elenco chiaro e **COMPLETO** di tutte le persone coinvolte (con nome, ruolo, data di nascita se disponibile) e di tutte le aziende.
+4.  Nell'allegato sulle entità, includi un elenco chiaro e **COMPLETO** di tutte le persone coinvolte (con nome, ruolo, data di nascita se disponibile) e di tutte le aziende.
 5.  Estrai **TUTTE** le persone e le aziende menzionate da **TUTTE** le fonti (vecchie e nuove), e formattale nell'oggetto \`updatedEntities\`. Se il ruolo non è specificato, lascia il valore \`null\` e **NON usare "sconosciuto"**.
+6.  Scrivi la sintesi per ultima: prima i fatti e i giudizi, poi la sintesi che li copre tutti.
+
+**LINGUAGGIO DELLA PROBABILITÀ (OBBLIGATORIO):**
+Per esprimere quanto è probabile un evento o una circostanza usa SOLO questi sette termini, tratti dalla prima riga della scala di probabilità della direttiva ICD 203, sempre nella stessa forma. Alla prima occorrenza di ciascun termine indica l'intervallo tra parentesi.
+| Termine | Intervallo |
+|---|---|
+| quasi nessuna possibilità | 01-05% |
+| molto improbabile | 05-20% |
+| improbabile | 20-45% |
+| probabilità pressoché pari | 45-55% |
+| probabile | 55-80% |
+| molto probabile | 80-95% |
+| quasi certo | 95-99% |
+- Non usare sinonimi o altre scale ('remoto', 'altamente probabile', 'verosimile', 'plausibile', 'possibile', 'praticamente certo').
+- La **fiducia** (\`fiducia alta\`, \`fiducia moderata\`, \`fiducia bassa\`) dice quanto è solida la base del giudizio: numero, qualità e indipendenza delle fonti, solidità del ragionamento. Va dichiarata in una frase separata, **mai nella stessa frase di un termine di probabilità**. Spiega che cosa la determina (fonte unica, informazioni datate, lacuna, assunzione chiave).
+- I **fatti** si scrivono senza qualificatori, con il riferimento alla fonte. La certezza appartiene ai fatti osservati, non è un grado di probabilità.
+- **Vietati** fuori dalla scala: 'potrebbe', 'sembrerebbe', 'si ritiene', 'pare', 'forse', 'non è escluso', 'resta da vedere', 'fonti riferiscono'. 'Potrebbe' e 'può' sono ammessi solo con una condizione esplicita ('il gruppo può spostare l'attività su un'altra provincia se...'). Non usare il condizionale giornalistico ('avrebbe ricevuto'): attribuisci l'affermazione a chi la fa ('secondo la Procura di Milano, X ha ricevuto...').
+- **Presunzione di innocenza:** le ipotesi di reato sono contestazioni dell'accusa, non fatti accertati. Il fatto è che l'accusa le contesta ('la Procura contesta a X il reato di...'); usa 'indagato', 'imputato', 'arrestato', 'condannato' secondo la fase effettiva del procedimento.
+
+**VALUTAZIONE DELLE FONTI (sistema 4x4 UNODC):**
+Ogni fonte riceve due voti separati: affidabilità della fonte (A, B, C, X) e validità dell'informazione (1, 2, 3, 4), scritti insieme come codice (es. \`A1\`, \`B2\`, \`X4\`). La fonte non è il sito che ospita il testo, ma chi ha prodotto l'informazione.
+- **Fonte A**: ente che produce l'informazione per funzione istituzionale. Comunicato ufficiale di Questura, Carabinieri, Guardia di Finanza, Polizia di Stato, Procura; provvedimento giudiziario (ordinanza, decreto, sentenza) pubblicato o citato testualmente.
+  - Informazione **1**: il contenuto dell'atto, o un dato che l'ente attesta in prima persona (arresti eseguiti, beni sequestrati, data e luogo dell'operazione).
+  - Informazione **2**: la ricostruzione dell'accusa contenuta nel comunicato (ruoli, schema, ipotesi di reato): l'ente la conosce direttamente, ma non è ancora verificata in giudizio.
+- **Fonte B**: testata giornalistica registrata, con firma o redazione identificabile e una storia di affidabilità, che riprende un comunicato o un atto.
+  - Informazione **2**: il giornalista ha visto l'atto, cita testualmente o era presente.
+  - Informazione **3**: l'informazione è di seconda mano ma corroborata da un'altra fonte indipendente (es. il comunicato ufficiale).
+- **Fonte C**: testata o sito con una storia nota di inesattezze.
+- **Fonte X**: testata sconosciuta, aggregatore senza firma, blog, profilo social anonimo, voce non attribuita ('secondo indiscrezioni', 'fonti investigative' senza nome). Una voce non attribuita e non corroborata è \`X4\`; se corroborata da una fonte indipendente diventa \`X3\`.
+- Le dichiarazioni di indagati, difensori o vittime sono la versione di quella parte: valutale come ciò che la parte afferma, non come un fatto sul caso.
+- **La corroborazione deve essere indipendente:** dieci articoli che riprendono lo stesso comunicato sono una sola fonte. Indica sempre l'origine comune.
+- Un'informazione è **confermata** solo con voto A1, A2, B1 o B2; con ogni altro voto è **non confermata** e va detto.
+- I risultati di ricerca e le sintesi generate da IA non sono fonti: cita l'articolo o l'atto a cui rimandano.
+
+**REGOLE DI SCRITTURA:**
+- La prima frase di ogni paragrafo riassume l'intero paragrafo; le frasi successive la sostengono, dalla più importante alla meno importante.
+- Non aprire mai con una data o con la storia del caso: apri con ciò che il lettore deve sapere.
+- Una frase, un'affermazione; circa venti parole, mai oltre trentacinque. Forma attiva, con chi agisce come soggetto.
+- Concretezza: niente 'vari', 'diversi', 'numerosi', 'ecc.'. Se non hai il dettaglio, togli l'espressione.
+- Scrivi del caso, non delle fonti ('l'articolo fornisce dettagli' non dice nulla: scrivi quali sono i dettagli).
+- Usa sempre la stessa grafia per ogni nome di persona, società e luogo.
+- Date senza ambiguità: \`14 settembre 2026\`.
 
 **REGOLE CRITICHE DI STRUTTURA DEL REPORT:**
-- Il \`reportContent\` DEVE seguire esattamente questa struttura di sezioni Markdown, nell'ordine indicato:
-  1.  \`### 1. Riepilogo dei Fatti\`
-  2.  \`### 2. Analisi del Modus Operandi\`
-  3.  \`### 3. Entità Coinvolte (Dettagli)\`
-  4.  \`### 4. Valutazione Analitica\`
-      -   **All'inizio di questa sezione, DEVI dichiarare un livello di confidenza** (es. **Livello di Confidenza: Alto**) e motivarlo brevemente (es. basato sulla concordanza di più fonti primarie).
-      -   Nel testo, **DEVI distinguere esplicitamente i fatti dalle ipotesi** (es. "Le fonti riportano che..." per i fatti; "È probabile che...", "Questo potrebbe indicare..." per le ipotesi).
-      -   **DEVI identificare le principali lacune informative** e, se possibile, considerare brevemente ipotesi alternative.
-  5.  \`### 5. Dati Geografici Riepilogativi\`
-  6.  \`### 6. Fonti Utilizzate\` (Elenca TUTTE le fonti come una **lista numerata**. **Formatta ogni fonte come un link Markdown cliccabile: \`1. [Titolo Articolo - Nome Giornale](URL) - Data consultazione\`**).
-  7.  \`### 7. Verifiche con sistemi interni\` (Usa ESATTAMENTE e SOLO il testo: "Le verifiche con i sistemi interni non sono ancora state effettuate").
+- Il \`reportContent\` DEVE seguire esattamente questa struttura di sezioni Markdown, nell'ordine indicato. Usa solo titoli di livello \`###\`; all'interno delle sezioni usa paragrafi, elenchi, grassetto e tabelle, ma non altri titoli.
+  1.  \`### 1. Sintesi (bottom line)\`: risponde alla domanda in 3-5 frasi: che cosa è accaduto, che cosa significa, quanto sei sicuro (con un termine della scala o un livello di fiducia, mai entrambi nella stessa frase). Basta da sola per agire.
+  2.  \`### 2. Giudizi chiave\`: elenco numerato. Ogni giudizio è una frase con un termine della scala di probabilità e i riferimenti alle fonti su cui poggia (es. \`(F1, F3)\`), seguita da una frase separata con il livello di fiducia e il motivo. Esempio: '1. È probabile (55-80%) che il gruppo operasse anche in Campania, perché due ordinanze citano depositi a Caserta (F1, F2). Fiducia moderata: entrambe le ordinanze derivano dalla stessa indagine.'
+  3.  \`### 3. Fatti accertati\`: elenco numerato dei fatti, senza qualificatori, ciascuno con riferimento e voto 4x4 della fonte (es. \`(F1, A1)\`). Solo fatti: nessun giudizio, nessun livello di fiducia. Le contestazioni dell'accusa sono riportate come tali.
+  4.  \`### 4. Analisi\`: come i fatti sostengono i giudizi. Usa queste etichette in grassetto, nell'ordine: **Modus operandi** (lo schema criminale descritto dall'accusa, i ruoli, i flussi di denaro o di merce), **Ipotesi alternative** (le spiegazioni alternative considerate e perché sono state scartate o mantenute), **Assunzioni chiave** (le assunzioni da cui dipende il ragionamento).
+  5.  \`### 5. Lacune e prossimi passi\`: che cosa non è stato possibile accertare, che cosa colmerebbe ciascuna lacuna (es. l'ordinanza integrale, l'esito del riesame, la data dell'udienza) e gli indicatori che cambierebbero i giudizi.
+  6.  \`### 6. Fonti\`: una frase di sintesi sulla base delle fonti (quante fonti indipendenti, di che tipo, da quali dipendono i giudizi chiave), seguita da una tabella con TUTTE le fonti: \`| Rif. | Fonte | Chi è la fonte | Data di pubblicazione | Data di consultazione | Voto |\`. Nella colonna Fonte formatta ogni fonte come link Markdown cliccabile: \`[Titolo Articolo - Nome Giornale](URL)\`. Riferimenti \`F1\`, \`F2\`... nell'ordine.
+  7.  \`### 7. Metodo e limiti\`: due o tre frasi: report generato da un modello di IA con ricerca web su fonti giornalistiche aperte, periodo coperto dalle fonti, che cosa non è stato consultato (atti non pubblicati, banche dati riservate).
+  8.  \`### Allegato A. Entità coinvolte\`: persone (nome, ruolo, data di nascita se disponibile, posizione processuale) e aziende (denominazione, ruolo, provvedimento), con i riferimenti alle fonti.
+  9.  \`### Allegato B. Dati geografici riepilogativi\`: città, province e regioni coinvolte, con il ruolo di ciascun luogo nel caso.
+  10. \`### Allegato C. Verifiche con sistemi interni\` (Usa ESATTAMENTE e SOLO il testo: "Le verifiche con i sistemi interni non sono ancora state effettuate").
 - **NON DEVI includere** una sezione "Raccomandazioni".
-- **DISCLAIMER OBBLIGATORIO:** Alla fine del report, dopo tutte le altre sezioni, DEVI includere il seguente testo esatto in corsivo: *Questo report è stato sviluppato da POLICE CHRONICLE. Le informazioni devono essere validate da un analista prima di poter essere considerate valide.*
+- **DISCLAIMER OBBLIGATORIO:** Alla fine del report, dopo tutte le altre sezioni, DEVI includere il seguente testo esatto in corsivo: *Questo report è stato sviluppato da ACTA DIURNA. Le informazioni devono essere validate da un analista prima di poter essere considerate valide.*
 - Se non trovi informazioni sufficienti, restituisci un oggetto JSON di errore: \`{"error": "Motivazione..."}\`.
 - **Formato del testo:** All'interno del \`reportContent\`, usa solo virgolette singole (') e non doppie (") per evitare errori di parsing JSON.
 - L'output finale DEVE essere un singolo oggetto JSON che rispetta lo schema, senza testo o commenti esterni.

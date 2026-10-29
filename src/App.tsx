@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { generateCaseData, updateCaseDetails, generateDeepDiveReport, analyzeSingleUrl, reviseSearchPrompt, defaultPrompt, loadCoordinatesCache } from './services/aiService';
 import type { CaseData, CrimeCategory, PromptHistoryEntry, UserFeedback } from './types';
 import * as db from './db';
@@ -29,8 +29,6 @@ const App: React.FC = () => {
   // Zustand store selectors
   const {
     selectedCase,
-    isFetching,
-    isOverrideActive,
     isRevisingPrompt,
     isPromptHistoryOpen,
     setCases,
@@ -47,6 +45,11 @@ const App: React.FC = () => {
     setIsApiKeyModalOpen,
   } = useCaseStore();
 
+  // Un solo lavoro con il modello alla volta: rassegna, aggiornamenti e analisi
+  // di un URL non partono insieme. Un ref, non lo stato, perche' due chiamate
+  // ravvicinate leggerebbero lo stesso valore vecchio.
+  const busyRef = useRef(false);
+
   const loadAndSetCases = useCallback(async () => {
     const allCases = await db.getAllCases();
     const sortedCases = allCases.sort((a, b) => new Date(b.lastUpdateTimestamp).getTime() - new Date(a.lastUpdateTimestamp).getTime());
@@ -55,7 +58,8 @@ const App: React.FC = () => {
   }, [setCases]);
 
   const fetchCases = useCallback(async () => {
-    if (isFetching) return;
+    if (busyRef.current) return;
+    busyRef.current = true;
     setIsFetching(true);
     setError(null);
     try {
@@ -95,13 +99,19 @@ const App: React.FC = () => {
       }
       setError(errorMessage);
     } finally {
+      busyRef.current = false;
       setIsFetching(false);
     }
-  }, [isFetching, selectedCase, loadAndSetCases, setIsFetching, setError, setSelectedCase]);
+  }, [selectedCase, loadAndSetCases, setIsFetching, setError, setSelectedCase]);
   
   const handleUpdateCase = useCallback(async (caseID: string, isSilent: boolean = false) => {
+      if (busyRef.current) {
+          if (!isSilent) setError("Un'altra operazione con il modello è in corso: riprova tra poco.");
+          return;
+      }
       const caseToUpdate = await db.getCase(caseID);
       if (!caseToUpdate) return;
+      busyRef.current = true;
 
       if (!isSilent) setActiveAction({ caseID, action: 'updating' });
       if (!isSilent) setError(null);
@@ -149,6 +159,7 @@ const App: React.FC = () => {
           console.error(`Failed to update case ${caseID}:`, err);
           if (!isSilent) setError("Failed to update case details. Source connection may be compromised.");
       } finally {
+          busyRef.current = false;
           if (!isSilent) setActiveAction(null);
       }
   }, [loadAndSetCases, selectedCase, setActiveAction, setError, setSelectedCase]);
@@ -157,7 +168,7 @@ const App: React.FC = () => {
     const now = new Date();
     const hour = now.getHours();
 
-    if (!isOverrideActive && (hour < 9 || hour > 17)) {
+    if (!useCaseStore.getState().isOverrideActive && (hour < 9 || hour > 17)) {
         console.log("Auto-update skipped: outside monitoring window (9-17) and override is off.");
         return;
     }
@@ -197,7 +208,7 @@ const App: React.FC = () => {
     if (updatePromises.length > 0 || casesToUpdate.length > 0) {
         await loadAndSetCases();
     }
-  }, [handleUpdateCase, loadAndSetCases, isOverrideActive]);
+  }, [handleUpdateCase, loadAndSetCases]);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -217,9 +228,10 @@ const App: React.FC = () => {
             if (activeCases.length > 0) {
                 setSelectedCase(activeCases[0]);
             }
-        } else if (keyConfigured) {
-            fetchCases();
         }
+        // A database vuoto non parte nessuna rassegna da sola: ogni ricarica
+        // della pagina ne lanciava una, e ognuna costa. La prima si avvia con
+        // «CERCA ORA».
         
         const timer = setTimeout(() => {
             setIsInitializing(false);
@@ -230,29 +242,37 @@ const App: React.FC = () => {
     loadInitialData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // I timer si montano una volta sola e chiamano sempre la versione piu'
+  // recente delle funzioni. Prima dipendevano da fetchCases e
+  // runScheduledTasks, che cambiano a ogni clic su un caso: la ricerca ogni 4
+  // ore ripartiva da zero e non arrivava mai, gli aggiornamenti partivano 10
+  // secondi dopo ogni clic.
+  const fetchCasesRef = useRef(fetchCases);
+  fetchCasesRef.current = fetchCases;
+  const runScheduledTasksRef = useRef(runScheduledTasks);
+  runScheduledTasksRef.current = runScheduledTasks;
+
   useEffect(() => {
     const checkNews = () => {
-        const now = new Date();
-        const hour = now.getHours();
-        if (isOverrideActive || (hour >= 9 && hour <= 17)) {
+        const hour = new Date().getHours();
+        if (useCaseStore.getState().isOverrideActive || (hour >= 9 && hour <= 17)) {
             console.log("Scheduled check: Fetching new data...");
-            fetchCases();
+            fetchCasesRef.current();
         }
     };
     const interval = setInterval(checkNews, 4 * 60 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [fetchCases, isOverrideActive]);
-  
+  }, []);
+
   useEffect(() => {
-      const startupTimer = setTimeout(() => {
-          runScheduledTasks();
-      }, 10000);
-      const intervalId = setInterval(runScheduledTasks, 120 * 60 * 1000);
+      const run = () => runScheduledTasksRef.current().catch(err => console.error('Scheduled tasks failed:', err));
+      const startupTimer = setTimeout(run, 10000);
+      const intervalId = setInterval(run, 120 * 60 * 1000);
       return () => {
           clearTimeout(startupTimer);
           clearInterval(intervalId);
       };
-  }, [runScheduledTasks]);
+  }, []);
 
   const handleSelectCase = async (caseData: CaseData) => {
     setReport(null);
@@ -340,6 +360,11 @@ const App: React.FC = () => {
         return;
     }
     
+    if (busyRef.current) {
+        setError("Un'altra operazione con il modello è in corso: riprova tra poco.");
+        return;
+    }
+    busyRef.current = true;
     setActiveAction({ caseID: 'url-analysis', action: 'analyzingUrl' });
     setError(null);
 
@@ -406,6 +431,7 @@ const App: React.FC = () => {
         console.error("Failed to process reported URL:", err);
         setError(err.message || "Analisi dell'URL fallita. Riprova.");
     } finally {
+        busyRef.current = false;
         setActiveAction(null);
     }
   };

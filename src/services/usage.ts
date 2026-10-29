@@ -104,3 +104,28 @@ export const getUsageSummary = async (): Promise<UsageSummary> => {
 };
 
 export const clearUsage = (): Promise<void> => setSettings(USAGE_SETTING, []);
+
+// Tetto di spesa giornaliero: raggiunto il tetto, nessuna nuova chiamata parte
+// fino a domani. Esiste perche' una rassegna puo' costare piu' di un dollaro e
+// le chiamate partono anche da sole (aggiornamenti, ricerca periodica).
+const BUDGET_SETTING = 'dailyBudgetUsd';
+export const DEFAULT_DAILY_BUDGET_USD = 1;
+
+export const getDailyBudget = async (): Promise<number> => {
+    const value = await getSettings(BUDGET_SETTING);
+    return typeof value === 'number' && value >= 0 ? value : DEFAULT_DAILY_BUDGET_USD;
+};
+
+export const setDailyBudget = async (usd: number): Promise<void> => {
+    if (!Number.isFinite(usd) || usd < 0) {
+        throw new Error('Il tetto deve essere un numero maggiore o uguale a zero.');
+    }
+    await setSettings(BUDGET_SETTING, usd);
+};
+
+/** Spesa di oggi e tetto, per decidere se una chiamata puo' partire. */
+export const getBudgetStatus = async (): Promise<{ spentToday: number; budget: number; exhausted: boolean }> => {
+    const [summary, budget] = await Promise.all([getUsageSummary(), getDailyBudget()]);
+    const spentToday = summary.today.costUsd;
+    return { spentToday, budget, exhausted: spentToday >= budget };
+};

@@ -258,6 +258,15 @@ const summarizeCasesForPrompt = (cases: CaseData[], showFeedback: boolean = fals
     }).join('\n');
 };
 
+// Per il controllo dei duplicati bastano i casi recenti: la rassegna cerca
+// notizie degli ultimi giorni. Passarli tutti faceva crescere il prompt, e il
+// costo, a ogni caso raccolto.
+const DEDUP_WINDOW_DAYS = 60;
+const recentCasesForDedup = (cases: CaseData[]): CaseData[] => {
+    const since = Date.now() - DEDUP_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    return cases.filter(c => new Date(c.lastUpdateTimestamp || c.initialReportTimestamp).getTime() >= since);
+};
+
 export const defaultPrompt = `
 Sei "Chronicle", un'intelligenza artificiale analista per forze dell'ordine, specializzata in criminalità italiana. Il tuo compito è monitorare fonti giornalistiche per identificare operazioni di polizia di rilievo e trasformarle in report strutturati.
 
@@ -341,7 +350,7 @@ ${summarizeCasesForPrompt(standardExamples)}
 ${summarizeCasesForPrompt(irrelevantExamples, true)}
 
 **CASI ESISTENTI (da usare per il filtro anti-duplicazione):**
-${JSON.stringify(existingCases.map(c => ({ caseID: c.caseID, title: c.summary.title, location: c.summary.location.cities.length > 0 ? c.summary.location.cities[0].name : 'N/A', date: c.summary.dateOfOperation })), null, 2)}
+${JSON.stringify(recentCasesForDedup(existingCases).map(c => ({ title: c.summary.title, city: c.summary.location.cities[0]?.name ?? null, date: c.summary.dateOfOperation })))}
 `;
     
     promptToUse += profileSection;
@@ -467,7 +476,7 @@ export const analyzeSingleUrl = async (url: string, existingCases: CaseData[]): 
         7.  Il tuo output deve essere ESCLUSIVAMENTE l'oggetto JSON, senza markdown o altri commenti.
 
         **CASI ESISTENTI PER CONTROLLO DUPLICATI:**
-        ${JSON.stringify(existingCases.map(c => ({ caseID: c.caseID, title: c.summary.title, date: c.summary.dateOfOperation })), null, 2)}
+        ${JSON.stringify(recentCasesForDedup(existingCases).map(c => ({ title: c.summary.title, date: c.summary.dateOfOperation })))}
         
         **SCHEMA JSON DI OUTPUT (parziale, compila più campi possibili):**
         \`\`\`json

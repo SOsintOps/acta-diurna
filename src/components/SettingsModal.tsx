@@ -6,7 +6,7 @@ import type { AiProvider } from '../services/llm';
 import { getFederationState, type FederationState } from '../services/llm/federation';
 import { CLAUDE_PHASES } from '../services/llm/claude';
 import type { Phase } from '../services/llm/types';
-import { getUsageSummary, type UsageSummary, type UsageTotals } from '../services/usage';
+import { getDailyBudget, getUsageSummary, setDailyBudget, type UsageSummary, type UsageTotals } from '../services/usage';
 import PulsingTriangle from './icons/PulsingTriangle';
 
 // Dove si ottiene la chiave di ciascun fornitore, in ordine di presentazione.
@@ -165,12 +165,26 @@ const usd = (value: number) => `$${value < 0.01 && value > 0 ? value.toFixed(4) 
 const UsagePanel: React.FC<{ isOpen: boolean }> = ({ isOpen }) => {
     const s = useStyles();
     const [summary, setSummary] = useState<UsageSummary | null>(null);
+    const [budget, setBudget] = useState('');
+    const [budgetMessage, setBudgetMessage] = useState<string | null>(null);
 
     useEffect(() => {
-        if (isOpen) getUsageSummary().then(setSummary);
+        if (!isOpen) return;
+        getUsageSummary().then(setSummary);
+        getDailyBudget().then(value => setBudget(value.toFixed(2)));
+        setBudgetMessage(null);
     }, [isOpen]);
 
     if (!summary) return null;
+
+    const handleSaveBudget = async () => {
+        try {
+            await setDailyBudget(Number(budget.replace(',', '.')));
+            setBudgetMessage('Tetto salvato.');
+        } catch (error: any) {
+            setBudgetMessage(error?.message ?? 'Salvataggio non riuscito.');
+        }
+    };
 
     const rows: [string, UsageTotals][] = [
         ['Oggi', summary.today],
@@ -187,6 +201,28 @@ const UsagePanel: React.FC<{ isOpen: boolean }> = ({ isOpen }) => {
                 <span className="font-bold">Consumi Claude</span>
                 <span className={`ml-auto text-xs ${s.muted}`}>stima</span>
             </div>
+            <div className="flex items-center gap-2 text-xs mb-3">
+                <label htmlFor="daily-budget">Tetto giornaliero $</label>
+                <input
+                    id="daily-budget"
+                    type="text"
+                    inputMode="decimal"
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveBudget(); }}
+                    className={`w-20 p-1 text-xs border rounded-md ${s.field}`}
+                />
+                <button
+                    onClick={handleSaveBudget}
+                    className={`px-2 py-1 font-mono text-xs border rounded-md transition-colors ${s.primaryButton}`}
+                >
+                    SALVA
+                </button>
+                <span className={`ml-auto ${summary.today.costUsd >= Number(budget.replace(',', '.')) ? s.warn : s.muted}`}>
+                    oggi {usd(summary.today.costUsd)}
+                </span>
+            </div>
+            {budgetMessage && <p className={`text-xs mb-2 ${s.muted}`}>{budgetMessage}</p>}
             <table className="w-full text-xs">
                 <tbody>
                     {rows.map(([label, t]) => (

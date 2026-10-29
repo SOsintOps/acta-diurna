@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getApiKey, isEnvOverrideActive } from '../apiKey';
 import { federatedAccessToken, getFederationState } from './federation';
-import { estimateCost, recordUsage } from '../usage';
+import { estimateCost, getBudgetStatus, recordUsage } from '../usage';
 import { LlmError, type Phase, type PhaseRequest, type PhaseResult, type SourceRef } from './types';
 
 type Effort = 'low' | 'medium' | 'high';
@@ -21,7 +21,7 @@ interface PhaseModel {
  * acta-diurna-lab/.planning/PLAN-CLAUDE.md.
  */
 export const CLAUDE_PHASES: Record<Phase, PhaseModel> = {
-    search:       { model: 'claude-sonnet-5-5', effort: 'high',   maxSearches: 10, label: 'Rassegna',          reason: 'Ricerca a piu\' passi ed estrazione' },
+    search:       { model: 'claude-sonnet-5-5', effort: 'medium', maxSearches: 6,  label: 'Rassegna',          reason: 'Ricerca a piu\' passi ed estrazione' },
     analyzeUrl:   { model: 'claude-sonnet-5-5', effort: 'medium', maxSearches: 3,  label: 'Analisi URL',       reason: 'Lettura ed estrazione di un articolo' },
     updateCase:   { model: 'claude-sonnet-5-5', effort: 'medium', maxSearches: 5,  label: 'Aggiornamento',     reason: 'Completamento delle entita\'' },
     deepDive:     { model: 'claude-opus-5-5',   effort: 'high',   maxSearches: 10, label: 'Report',            reason: 'Ragionamento analitico, scala ICD 203' },
@@ -76,9 +76,17 @@ const getClient = async (): Promise<Anthropic> => {
     return client;
 };
 
+// Domini che non sono fonti giornalistiche: enciclopedie, social, video. Nei
+// test reali una rassegna ha citato la pagina inglese di Wikipedia come fonte
+// di un caso; leggerli costa token senza dare notizie.
+const BLOCKED_DOMAINS = [
+    'wikipedia.org', 'wikimedia.org', 'youtube.com', 'facebook.com', 'instagram.com',
+    'x.com', 'twitter.com', 'tiktok.com', 'linkedin.com', 'reddit.com',
+];
+
 const webTools = (maxSearches: number) => [
-    { type: 'web_search_20260209' as const, name: 'web_search' as const, max_uses: maxSearches, user_location: { type: 'approximate' as const, country: 'IT' } },
-    { type: 'web_fetch_20260209' as const, name: 'web_fetch' as const, max_uses: maxSearches },
+    { type: 'web_search_20260209' as const, name: 'web_search' as const, max_uses: maxSearches, blocked_domains: BLOCKED_DOMAINS, user_location: { type: 'approximate' as const, country: 'IT' } },
+    { type: 'web_fetch_20260209' as const, name: 'web_fetch' as const, max_uses: maxSearches, blocked_domains: BLOCKED_DOMAINS },
 ];
 
 /**
@@ -119,6 +127,14 @@ const finalText = (blocks: Anthropic.Beta.BetaContentBlock[]): string => {
 
 export const runClaude = async (phase: Phase, request: PhaseRequest): Promise<PhaseResult> => {
     const { model, effort, maxSearches } = CLAUDE_PHASES[phase];
+
+    const budget = await getBudgetStatus();
+    if (budget.exhausted) {
+        throw new LlmError(
+            `Tetto di spesa giornaliero raggiunto: spesi ${budget.spentToday.toFixed(2)} $ su ${budget.budget.toFixed(2)} $.` +
+            'Le chiamate a Claude riprendono domani, oppure alza il tetto dalle impostazioni.');
+    }
+
     const anthropic = await getClient();
     const useWeb = Boolean(request.webSearch) && maxSearches > 0;
 

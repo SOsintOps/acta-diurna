@@ -1,15 +1,38 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useCaseStore } from '../store/caseStore';
+import { ThemeContext } from '../contexts/ThemeContext';
 import { clearApiKey, hasApiKey, isEnvOverrideActive, setApiKey, PROVIDER_LABEL } from '../services/apiKey';
 import type { AiProvider } from '../services/llm';
 import { getFederationState, type FederationState } from '../services/llm/federation';
+import { CLAUDE_PHASES } from '../services/llm/claude';
+import type { Phase } from '../services/llm/types';
+import { getUsageSummary, type UsageSummary, type UsageTotals } from '../services/usage';
+import PulsingTriangle from './icons/PulsingTriangle';
 
 // Dove si ottiene la chiave di ciascun fornitore, in ordine di presentazione.
 const PROVIDERS: { id: AiProvider; url: string }[] = [
     { id: 'claude', url: 'https://platform.claude.com/settings/keys' },
     { id: 'gemini', url: 'https://aistudio.google.com/apikey' },
 ];
+
+// Classi dello stile originale, come nelle altre finestre (ModelSelectorModal).
+const useStyles = () => {
+    const { theme } = useContext(ThemeContext);
+    const dark = theme === 'dark';
+    return {
+        modalBg: dark ? 'bg-gray-900 border-gray-700' : 'bg-white border-zinc-300',
+        textColor: dark ? 'text-white' : 'text-black',
+        muted: dark ? 'text-gray-400' : 'text-zinc-500',
+        sectionBorder: dark ? 'border-gray-700' : 'border-zinc-200',
+        rowBorder: dark ? 'border-gray-800' : 'border-zinc-200',
+        field: dark ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500' : 'bg-white border-zinc-300 text-black placeholder-zinc-400',
+        primaryButton: dark ? 'border-blue-600/50 text-blue-400 hover:bg-blue-500 hover:text-black' : 'border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white',
+        dangerButton: dark ? 'border-red-600/50 text-red-500 hover:bg-red-600 hover:text-black' : 'border-red-500 text-red-600 hover:bg-red-500 hover:text-white',
+        closeButton: dark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-zinc-200 hover:bg-zinc-300',
+        ok: dark ? 'text-green-400' : 'text-green-700',
+        warn: dark ? 'text-red-400' : 'text-red-600',
+    };
+};
 
 /**
  * La chiave di un fornitore: stato, inserimento e revoca.
@@ -18,6 +41,7 @@ const PROVIDERS: { id: AiProvider; url: string }[] = [
  * impostazioni non deve poter leggere la chiave di chi l'ha inserita.
  */
 const ProviderKey: React.FC<{ provider: AiProvider; url: string; inUse: boolean; isOpen: boolean }> = ({ provider, url, inUse, isOpen }) => {
+    const s = useStyles();
     const [value, setValue] = useState('');
     const [keyPresent, setKeyPresent] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
@@ -60,21 +84,17 @@ const ProviderKey: React.FC<{ provider: AiProvider; url: string; inUse: boolean;
     };
 
     return (
-        <div className="mb-6">
-            <div className="flex items-center text-xs mb-3">
-                <span className="sam-status">CHIAVE {PROVIDER_LABEL[provider]}</span>
-                {keyPresent ? (
-                    <span className="sam-confirm px-2 tracking-[2px]">CONFIGURATA</span>
-                ) : (
-                    <span className={`sam-status-value ${inUse ? 'sam-blink' : ''}`}>ASSENTE</span>
-                )}
-                {inUse && <span className="sam-threat ml-auto text-[10px] tracking-[2px]">IN USO</span>}
+        <div className={`p-3 mb-3 border rounded-md ${inUse ? 'ring-2 ring-red-500' : s.sectionBorder}`}>
+            <div className="flex items-center text-sm mb-2">
+                <span className="font-bold">Chiave {PROVIDER_LABEL[provider] === 'CLAUDE' ? 'Claude' : 'Gemini'}</span>
+                <span className={`ml-2 text-xs ${keyPresent ? s.ok : s.warn}`}>{keyPresent ? 'configurata' : 'assente'}</span>
+                {inUse && <span className="ml-auto text-xs text-red-500">IN USO</span>}
             </div>
 
-            {provider === 'claude' && <FederationStatus federation={federation} overrideActive={overrideActive} />}
+            {provider === 'claude' && federation.state !== 'off' && <FederationStatus federation={federation} overrideActive={overrideActive} />}
 
             {overrideActive ? (
-                <p className="sam-body sam-muted text-xs leading-tight">
+                <p className={`text-xs ${s.muted}`}>
                     La chiave arriva dall'ambiente di compilazione e ha la precedenza su
                     qualunque valore salvato. Per cambiarla, ricompila senza chiave.
                 </p>
@@ -85,28 +105,28 @@ const ProviderKey: React.FC<{ provider: AiProvider; url: string; inUse: boolean;
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter' && value.trim()) handleSave(); }}
-                        placeholder="INSERIRE CHIAVE"
+                        placeholder="Incolla qui la chiave"
                         autoComplete="off"
                         autoFocus={inUse && !keyPresent}
-                        className="sam-field w-full p-2 text-xs"
+                        className={`w-full p-2 text-sm border rounded-md ${s.field}`}
                     />
-                    <p className="sam-body sam-muted text-[10px] mt-2 leading-tight">
+                    <p className={`text-xs mt-1 ${s.muted}`}>
                         Si ottiene da <a href={url} target="_blank" rel="noreferrer" className="underline">{new URL(url).host}</a>.
-                        Salvata nel database dell'applicazione, su questo browser; non viene mai mostrata di nuovo.
+                        Resta in questo browser e non viene mai mostrata di nuovo.
                     </p>
 
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex gap-2 mt-2">
                         <button
                             onClick={handleSave}
                             disabled={isSaving || !value.trim()}
-                            className="sam-action flex-1 p-2 text-xs"
+                            className={`flex-1 p-2 font-mono text-sm border rounded-md transition-colors disabled:opacity-40 ${s.primaryButton}`}
                         >
-                            {isSaving ? 'SALVATAGGIO' : 'CONFERMA'}
+                            {isSaving ? 'SALVATAGGIO...' : 'SALVA'}
                         </button>
                         {keyPresent && (
                             <button
                                 onClick={handleClear}
-                                className="sam-action sam-action-threat flex-1 p-2 text-xs"
+                                className={`flex-1 p-2 font-mono text-sm border rounded-md transition-colors ${s.dangerButton}`}
                             >
                                 REVOCA
                             </button>
@@ -115,44 +135,97 @@ const ProviderKey: React.FC<{ provider: AiProvider; url: string; inUse: boolean;
                 </>
             )}
 
-            {message && (
-                <p className="sam-status-value sam-body text-xs mt-2">{message}</p>
-            )}
+            {message && <p className={`text-xs mt-2 ${s.muted}`}>{message}</p>}
         </div>
     );
 };
 
 /**
- * Stato della federazione d'identita' di Claude. Si configura sul server, in
- * .env: qui si legge soltanto, senza mai mostrare identificativi o token.
+ * Stato della federazione d'identita' di Claude, quando e' configurata sul
+ * server in .env. Si mostra solo lo stato, mai identificativi o token.
  */
-const FederationStatus: React.FC<{ federation: FederationState; overrideActive: boolean }> = ({ federation, overrideActive }) => (
-    <div className="mb-3">
-        <div className="flex items-center text-xs mb-1">
-            <span className="sam-status">FEDERAZIONE</span>
-            {federation.state === 'on' && <span className="sam-confirm px-2 tracking-[2px]">ATTIVA</span>}
-            {federation.state === 'error' && <span className="sam-status-value sam-threat">ERRORE</span>}
-            {federation.state === 'off' && <span className="sam-status-value">NON CONFIGURATA</span>}
-        </div>
-        <p className="sam-body sam-muted text-[10px] leading-tight">
+const FederationStatus: React.FC<{ federation: FederationState; overrideActive: boolean }> = ({ federation, overrideActive }) => {
+    const s = useStyles();
+    return (
+        <p className={`text-xs mb-2 ${federation.state === 'on' ? s.ok : s.warn}`}>
             {federation.state === 'on' && (overrideActive
-                ? 'Attiva, ma la chiave da ambiente di compilazione ha la precedenza.'
-                : "Il server scambia l'identità con un token di breve durata, che ha la precedenza sulla chiave salvata.")}
-            {federation.state === 'error' && federation.message}
-            {federation.state === 'off' && 'Si attiva dal file .env del server, al posto della chiave: vedi .env.example.'}
+                ? 'Federazione attiva, ma la chiave da ambiente di compilazione ha la precedenza.'
+                : "Federazione d'identità attiva: ha la precedenza sulla chiave salvata.")}
+            {federation.state === 'error' && `Federazione configurata ma in errore: ${federation.message}`}
         </p>
-    </div>
-);
+    );
+};
+
+const usd = (value: number) => `$${value < 0.01 && value > 0 ? value.toFixed(4) : value.toFixed(2)}`;
+
+/**
+ * Consumi stimati delle chiamate a Claude, dal registro in services/usage.ts.
+ * Una stima dal listino: il costo vero e' nella Console di Anthropic.
+ */
+const UsagePanel: React.FC<{ isOpen: boolean }> = ({ isOpen }) => {
+    const s = useStyles();
+    const [summary, setSummary] = useState<UsageSummary | null>(null);
+
+    useEffect(() => {
+        if (isOpen) getUsageSummary().then(setSummary);
+    }, [isOpen]);
+
+    if (!summary) return null;
+
+    const rows: [string, UsageTotals][] = [
+        ['Oggi', summary.today],
+        ['Ultimi 30 giorni', summary.last30Days],
+        ['Totale', summary.total],
+    ];
+    const phases = (Object.keys(summary.byPhase) as Phase[])
+        .map(phase => [CLAUDE_PHASES[phase].label, summary.byPhase[phase]!] as const)
+        .sort((a, b) => b[1].costUsd - a[1].costUsd);
+
+    return (
+        <div className={`p-3 mb-3 border rounded-md ${s.sectionBorder}`}>
+            <div className="flex items-center text-sm mb-2">
+                <span className="font-bold">Consumi Claude</span>
+                <span className={`ml-auto text-xs ${s.muted}`}>stima</span>
+            </div>
+            <table className="w-full text-xs">
+                <tbody>
+                    {rows.map(([label, t]) => (
+                        <tr key={label} className={`border-b ${s.rowBorder}`}>
+                            <td className="py-1">{label}</td>
+                            <td className={`py-1 text-right ${s.muted}`}>{t.calls} chiamate</td>
+                            <td className={`py-1 text-right ${s.muted}`}>{t.webSearches} ricerche</td>
+                            <td className="py-1 text-right font-bold">{usd(t.costUsd)}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+            {phases.length > 0 && (
+                <table className="w-full text-xs mt-2">
+                    <tbody>
+                        {phases.map(([label, t]) => (
+                            <tr key={label}>
+                                <td className={`py-0.5 ${s.muted}`}>{label}</td>
+                                <td className={`py-0.5 text-right ${s.muted}`}>{t.calls} × {usd(t.costUsd / t.calls)}</td>
+                                <td className="py-0.5 text-right">{usd(t.costUsd)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+            <p className={`text-xs mt-2 ${s.muted}`}>
+                Calcolati dal listino sui token e sulle ricerche di ogni chiamata. Il costo
+                effettivo è nella Console di Anthropic.
+            </p>
+        </div>
+    );
+};
 
 /**
  * Impostazioni: le chiavi API di tutti i fornitori, non solo di quello in uso,
- * cosi' si puo' preparare un fornitore prima di passarci.
- *
- * Grafica in direzione Samaritan: filo di 2px, spigolo vivo, nessun raggio,
- * nessuna sfocatura, titolo che sborda dal riquadro. I colori arrivano dai
- * gettoni in index.css e non da ternari sul tema.
+ * cosi' si puo' preparare un fornitore prima di passarci, e i consumi.
  */
 const SettingsModal: React.FC = () => {
+    const s = useStyles();
     const { isApiKeyModalOpen, setIsApiKeyModalOpen, aiProvider, setIsModelSelectorOpen } = useCaseStore();
 
     if (!isApiKeyModalOpen) {
@@ -166,43 +239,47 @@ const SettingsModal: React.FC = () => {
 
     return (
         <div
-            className="sam-scrim fixed inset-0 z-[2000] flex items-center justify-center"
+            className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center backdrop-blur-sm"
             onClick={() => setIsApiKeyModalOpen(false)}
         >
             <div
-                className="sam-panel w-full max-w-md m-4 text-sm max-h-[90vh] overflow-y-auto overflow-x-hidden"
+                className={`w-full max-w-md m-4 p-4 rounded-lg border shadow-lg ${s.modalBg} ${s.textColor} flex flex-col font-mono max-h-[90vh] overflow-y-auto`}
                 onClick={(e) => e.stopPropagation()}
             >
-                <span className="sam-title text-xs">IMPOSTAZIONI</span>
+                <div className="flex items-center mb-4">
+                    <PulsingTriangle className="w-5 h-5 text-red-500 mr-3" staticPulse />
+                    <h2 className="text-xl tracking-wider">IMPOSTAZIONI</h2>
+                </div>
 
-                <div className="px-3 pt-6 pb-3">
-                    <div className="flex items-center text-xs mb-4">
-                        <span className="sam-status">FORNITORE</span>
-                        <span className="sam-status-value">{PROVIDER_LABEL[aiProvider]}</span>
-                        <button onClick={openModelSelector} className="sam-action-compact ml-auto px-2 text-[10px]">
-                            CAMBIA AI
-                        </button>
-                    </div>
-
-                    <div className="sam-rule mb-4" />
-
-                    {PROVIDERS.map(p => (
-                        <ProviderKey
-                            key={p.id}
-                            provider={p.id}
-                            url={p.url}
-                            inUse={p.id === aiProvider}
-                            isOpen={isApiKeyModalOpen}
-                        />
-                    ))}
-
+                <div className="flex items-center text-sm mb-4">
+                    <span className={s.muted}>Fornitore in uso:</span>
+                    <span className="ml-2 font-bold">{PROVIDER_LABEL[aiProvider] === 'CLAUDE' ? 'Claude' : 'Gemini'}</span>
                     <button
-                        onClick={() => setIsApiKeyModalOpen(false)}
-                        className="sam-action sam-action-ghost w-full p-2 mt-2 text-xs"
+                        onClick={openModelSelector}
+                        className={`ml-auto px-3 py-1 font-mono text-xs border rounded-md transition-colors ${s.primaryButton}`}
                     >
-                        CHIUDI
+                        CAMBIA AI
                     </button>
                 </div>
+
+                {PROVIDERS.map(p => (
+                    <ProviderKey
+                        key={p.id}
+                        provider={p.id}
+                        url={p.url}
+                        inUse={p.id === aiProvider}
+                        isOpen={isApiKeyModalOpen}
+                    />
+                ))}
+
+                <UsagePanel isOpen={isApiKeyModalOpen} />
+
+                <button
+                    onClick={() => setIsApiKeyModalOpen(false)}
+                    className={`mt-3 w-full p-2 rounded-md font-mono tracking-widest text-sm transition-colors ${s.closeButton}`}
+                >
+                    CHIUDI
+                </button>
             </div>
         </div>
     );

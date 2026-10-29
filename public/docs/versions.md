@@ -37,8 +37,24 @@ server dell'applicazione (`npm run dev` o `npm run preview`), configurato da
 `.env`; nel browser arriva solo il token breve. Le impostazioni mostrano se la
 federazione è attiva. Istruzioni nel README.
 
+**Torna la grafica di Police Chronicle 1.6.** Il ridisegno della 0.2.0 è stato
+ritirato: tornano il tema scuro blu-grigio, gli angoli arrotondati, i caratteri
+di sistema e il tema chiaro. Le finestre nuove (impostazioni, modello AI) sono
+nello stesso stile.
+
+**Consumi.** Le impostazioni mostrano quanto costano le chiamate a Claude: oggi,
+ultimi 30 giorni e totale, divisi per fase. È una stima dal listino; il costo
+effettivo è nella Console di Anthropic.
+
 **Correzioni**
 
+-   La mappa torna ad avere lo sfondo. Le tile di CARTO ora richiedono una
+    chiave e mostravano «API KEY REQUIRED»; si usano quelle di OpenStreetMap,
+    scurite nel tema scuro. In sviluppo, inoltre, lo sfondo non veniva mai
+    aggiunto alla mappa ricreata.
+-   Le finestre restano sopra la mappa.
+-   La rassegna legge il JSON anche quando il modello aggiunge una frase dopo:
+    prima la risposta veniva scartata come illeggibile.
 -   La rassegna riceve la data di oggi: prima il modello giudicava gli «ultimi 3
     giorni» senza sapere che giorno fosse.
 -   L'identificativo del caso lo assegna sempre il contatore locale. Prima

@@ -5,12 +5,12 @@ import { ThemeContext } from '../../contexts/ThemeContext';
 
 const ThemeToggleButton: React.FC = () => {
     const { theme, toggleTheme } = useContext(ThemeContext);
-    const iconColor = 'sam-muted hover:sam-fg';
+    const iconColor = theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-zinc-500 hover:text-black';
 
     return (
         <button
             onClick={toggleTheme}
-            aria-label={'Inverti la visualizzazione'}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             className={`p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-red-500 transition-colors ${iconColor}`}
         >
             {theme === 'dark' ? (

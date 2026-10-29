@@ -80,11 +80,7 @@ Google Gemini.
 
 - **Documentazione integrata**, accessibile dal menu «?».
 
-- **Interfaccia in direzione Samaritan.** Filo di 2px, spigolo vivo, nessun
-  angolo arrotondato e nessuna ombra morbida: il bagliore è del colore stesso,
-  perché l'interfaccia emette luce invece di riceverla. Il rosso è riservato
-  alla minaccia. Il commutatore in alto a destra non accende un tema chiaro: è
-  l'inversione da nero quasi puro a bianco quasi puro, lenta due secondi.
+- **Tema scuro e tema chiaro**, commutabili dall'intestazione.
 
 ## Requisiti
 
@@ -198,15 +194,8 @@ Leaflet · Anthropic Claude API · Google Gemini API
 
 Tutte le dipendenze sono installate come pacchetti npm: l'applicazione non
 carica codice da CDN esterni. L'unica risorsa remota a runtime è il servizio di
-mappe (tile OpenStreetMap/CARTO), inevitabile per una mappa geografica.
-
-Il carattere è **Nova Mono** (Wojciech Kalinowski, SIL OFL 1.1), vendorizzato in
-`public/fonts/` con la licenza accanto. Non viene caricato da Google Fonts né da
-altri servizi remoti.
-
-I valori dell'interfaccia derivano da due ricostruzioni pubbliche, entrambe MIT:
-[poi-web-ui](https://github.com/Phreshhh/poi-web-ui) di Krisztián Kis e
-[Samaritan](https://github.com/goncalomb/Samaritan) di Gonçalo Baltazar.
+mappe (tile [OpenStreetMap](https://www.openstreetmap.org/copyright)),
+inevitabile per una mappa geografica. I caratteri sono quelli di sistema.
 
 ## Documentazione
 

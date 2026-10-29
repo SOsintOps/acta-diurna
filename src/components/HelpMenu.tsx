@@ -1,5 +1,6 @@
 
-import React, {useState, useEffect, useRef} from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { ThemeContext } from '../contexts/ThemeContext';
 
 const HelpIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -19,7 +20,8 @@ const docLinks = [
 ];
 
 const HelpMenu: React.FC<HelpMenuProps> = ({ onSelectDoc }) => {
-        const [isOpen, setIsOpen] = useState(false);
+    const { theme } = useContext(ThemeContext);
+    const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -40,9 +42,9 @@ const HelpMenu: React.FC<HelpMenuProps> = ({ onSelectDoc }) => {
         setIsOpen(false);
     };
 
-    const buttonColor = 'sam-muted';
-    const menuBg = 'sam-panel';
-    const menuItemClass = 'sam-row';
+    const buttonColor = theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-zinc-500 hover:text-black';
+    const menuBg = theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-zinc-200';
+    const menuItemClass = theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-zinc-100';
 
     return (
         <div className="relative" ref={menuRef}>
@@ -51,13 +53,13 @@ const HelpMenu: React.FC<HelpMenuProps> = ({ onSelectDoc }) => {
                 aria-label="Apri menu aiuto"
                 aria-haspopup="true"
                 aria-expanded={isOpen}
-                className={`p-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-red-500 transition-colors ${buttonColor}`}
+                className={`p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-red-500 transition-colors ${buttonColor}`}
             >
                 <HelpIcon />
             </button>
             {isOpen && (
                 <div 
-                    className={`absolute right-0 mt-2 w-56 origin-top-right z-50 border ${menuBg}`}
+                    className={`absolute right-0 mt-2 w-56 origin-top-right rounded-md shadow-lg z-[2000] border ${menuBg}`}
                     role="menu"
                     aria-orientation="vertical"
                     aria-labelledby="menu-button"

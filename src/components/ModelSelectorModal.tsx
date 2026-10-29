@@ -9,8 +9,8 @@ import PulsingTriangle from './icons/PulsingTriangle';
 // Ogni voce sceglie un fornitore. Gemini usa un modello unico per tutte le
 // fasi; Claude usa il modello piu' adatto a ciascuna, vedi CLAUDE_PHASES.
 const availableModels: { id: string; provider: AiProvider; name: string; description: string }[] = [
-    { id: 'gemini-2.5-flash', provider: 'gemini', name: 'Gemini 2.5 Flash', description: 'Veloce ed efficiente, ideale per la maggior parte delle attività.' },
-    { id: 'claude', provider: 'claude', name: 'Claude', description: 'Un modello per fase: Haiku per le domande semplici, Sonnet per ricerca ed estrazione, Opus per il report.' },
+    { id: 'claude', provider: 'claude', name: 'Claude', description: 'Predefinito. Un modello per fase: Haiku per le domande semplici, Sonnet per ricerca ed estrazione, Opus per il report.' },
+    { id: 'gemini-2.5-flash', provider: 'gemini', name: 'Gemini 2.5 Flash', description: 'Alternativa, con un modello unico per tutte le fasi. Richiede una chiave Google.' },
 ];
 
 const ModelSelectorModal: React.FC = () => {

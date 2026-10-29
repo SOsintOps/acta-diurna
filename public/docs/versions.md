@@ -7,11 +7,12 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
 ### Versione 0.3.0
 *Data: 2026-10-29*
 
-**Claude come secondo fornitore, con un modello per fase**
+**Claude diventa il fornitore predefinito, con un modello per fase**
 
-Nella finestra **MODELLO AI** si sceglie ora tra Google Gemini e Anthropic
-Claude. Gemini usa un solo modello per tutto; Claude usa il modello più adatto
-a ciascuna fase:
+L'analisi passa ad Anthropic Claude, che usa il modello più adatto a ciascuna
+fase. Google Gemini resta selezionabile nella finestra **MODELLO AI**, con un
+modello unico. Al primo avvio dopo l'aggiornamento l'applicazione chiede la
+chiave API di Claude:
 
 | Fase | Modello |
 |---|---|

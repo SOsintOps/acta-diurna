@@ -19,7 +19,9 @@ export const useCaseStore = create<CaseStore>()(
       isPromptHistoryOpen: false,
       isApiKeyModalOpen: false,
       aiModel: 'gemini-2.5-flash',
-      aiProvider: 'gemini',
+      // Claude e' il predefinito: le preferenze salvate fino alla 0.2.1 non
+      // contengono il fornitore, quindi anche chi le ha passa a Claude.
+      aiProvider: 'claude',
 
       setCases: (cases) => set({ cases }),
       setSelectedCase: (caseData) => set({ selectedCase: caseData }),

@@ -23,7 +23,7 @@ Questa guida è pensata per un analista che si avvicina per la prima volta a Act
 
 ### 1. Cos'è Acta Diurna?
 
-Acta Diurna è una dashboard avanzata di **OSINT (Open-Source Intelligence)**. Utilizza un'intelligenza artificiale (Google Gemini) per analizzare in modo autonomo fonti giornalistiche pubbliche online (notizie, articoli, comunicati stampa) e identificare operazioni delle forze dell'ordine in Italia. L'obiettivo è estrarre, strutturare e presentare queste informazioni in un formato chiaro e immediatamente utilizzabile per l'analisi.
+Acta Diurna è una dashboard avanzata di **OSINT (Open-Source Intelligence)**. Utilizza un'intelligenza artificiale (Anthropic Claude, oppure in alternativa Google Gemini) per analizzare in modo autonomo fonti giornalistiche pubbliche online (notizie, articoli, comunicati stampa) e identificare operazioni delle forze dell'ordine in Italia. L'obiettivo è estrarre, strutturare e presentare queste informazioni in un formato chiaro e immediatamente utilizzabile per l'analisi.
 
 ### 2. Da dove provengono i dati?
 

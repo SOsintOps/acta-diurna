@@ -26,7 +26,8 @@ ricercatori.
 
 L'applicazione gira interamente nel browser. I dati restano sul computer di chi
 la usa, in IndexedDB, e non vengono trasmessi ad alcun server se non al
-fornitore di IA scelto per l'analisi: Google Gemini oppure Anthropic Claude.
+fornitore di IA scelto per l'analisi: Anthropic Claude, predefinito, oppure
+Google Gemini.
 
 ## Funzionalità
 
@@ -65,11 +66,12 @@ fornitore di IA scelto per l'analisi: Google Gemini oppure Anthropic Claude.
   dell'IA. La cronologia dei prompt è ispezionabile, confrontabile e
   ripristinabile.
 
-- **Scelta del fornitore e del modello.** Si sceglie tra Gemini, con un modello
-  unico, e Claude, che usa il modello più adatto per ogni fase: Haiku per la
+- **Scelta del fornitore e del modello.** Il predefinito è Claude, che usa il
+  modello più adatto per ogni fase: Haiku per la
   geocodifica, Sonnet per rassegna, analisi di un URL, aggiornamento e
   traduzione, Opus per il report di approfondimento e la revisione del profilo
-  di ricerca. Un errore di quota su un fornitore non blocca il lavoro.
+  di ricerca. In alternativa Gemini, con un modello unico. Un errore di quota
+  su un fornitore non blocca il lavoro.
 
 - **Import/export e fusione.** L'intero archivio si esporta in JSON. In fase di
   importazione si può sovrascrivere l'archivio locale oppure *integrarlo*,
@@ -89,10 +91,9 @@ fornitore di IA scelto per l'analisi: Google Gemini oppure Anthropic Claude.
 - **Node.js 20** o successivo
 - Una chiave API del fornitore scelto, da inserire dall'interfaccia al primo
   avvio:
-  - **Google Gemini** ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)):
-    il piano gratuito è sufficiente per provare l'applicazione;
-  - **Anthropic Claude** ([platform.claude.com](https://platform.claude.com/settings/keys)):
-    a consumo, con la ricerca web abilitata per l'organizzazione.
+  - **Anthropic Claude**, predefinito ([platform.claude.com](https://platform.claude.com/settings/keys)):
+    a consumo, con la ricerca web abilitata per l'organizzazione;
+  - **Google Gemini**, in alternativa ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)).
 
   Senza chiave l'applicazione parte lo stesso e l'archivio resta consultabile,
   ma non può analizzare nulla.
@@ -130,8 +131,8 @@ npm run preview   # serve dist/ in locale per verifica
 
 ### La chiave a build time è facoltativa
 
-Chi compila può fornire una chiave in `.env` (`GEMINI_API_KEY`,
-`ANTHROPIC_API_KEY`), copiando `.env.example`. In quel
+Chi compila può fornire una chiave in `.env` (`ANTHROPIC_API_KEY`,
+`GEMINI_API_KEY`), copiando `.env.example`. In quel
 caso la chiave fa da **override**: vince su quella inserita dall'interfaccia, e
 l'interfaccia non permette di cambiarla.
 
@@ -151,7 +152,7 @@ per usare l'applicazione solo in locale, senza esporla in rete.
         fonti giornalistiche italiane
                     │
                     ▼
-   Gemini o Claude + ricerca web            ← scoperta e strutturazione
+   Claude o Gemini + ricerca web            ← scoperta e strutturazione
                     │
                     ▼
         verifica della provenienza          ← scarta le fonti non verificabili
@@ -170,7 +171,7 @@ per usare l'applicazione solo in locale, senza esporla in rete.
 ## Tecnologie
 
 React 19 · TypeScript · Vite · Tailwind CSS · Zustand · Dexie.js (IndexedDB) ·
-Leaflet · Google Gemini API · Anthropic Claude API
+Leaflet · Anthropic Claude API · Google Gemini API
 
 Tutte le dipendenze sono installate come pacchetti npm: l'applicazione non
 carica codice da CDN esterni. L'unica risorsa remota a runtime è il servizio di

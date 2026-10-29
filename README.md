@@ -220,6 +220,7 @@ inevitabile per una mappa geografica. I caratteri sono quelli di sistema.
 
 | Documento | Contenuto |
 |---|---|
+| [Requisiti e funzionamento](docs/FUNZIONAMENTO.md) | Che cosa fa Acta Diurna e come: requisiti, flusso, modelli, limiti |
 | [Guida operativa](public/docs/help.md) | Metodo di lavoro per l'analista |
 | [FAQ](public/docs/FAQ.md) | Funzionamento, capacità e limiti |
 | [Cronologia versioni](public/docs/versions.md) | Cosa è cambiato e quando |

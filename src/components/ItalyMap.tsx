@@ -1,8 +1,19 @@
 import React, { useEffect, useRef, useContext, useState } from 'react';
 import L from 'leaflet';
-import type { Map as LeafletMap, TileLayer, CircleMarker, GeoJSON } from 'leaflet';
+import type { Map as LeafletMap, TileLayer, Marker, GeoJSON } from 'leaflet';
 import type { CaseData } from '../types';
 import { ThemeContext } from '../contexts/ThemeContext';
+
+// Le citta' del caso sono triangoli, lo stesso segno del logo (PulsingTriangle):
+// pieno e grande per la citta' principale, piccolo per le localita' secondarie.
+const triangleIcon = (size: number, color: string, primary: boolean) =>
+  L.divIcon({
+    className: '',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size * 0.75],
+    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}" style="filter:drop-shadow(0 0 ${primary ? 6 : 3}px ${color})">`
+      + `<path d="M12 2L1.5 21h21L12 2z" fill="${color}" fill-opacity="${primary ? 1 : 0.8}" stroke="${color}" stroke-width="1"/></svg>`,
+  });
 
 interface ItalyMapProps {
   cases: CaseData[];
@@ -13,7 +24,7 @@ interface ItalyMapProps {
 const ItalyMap: React.FC<ItalyMapProps> = ({ cases, onSelectCase, selectedCaseId }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<LeafletMap | null>(null);
-  const markersRef = useRef<CircleMarker[]>([]);
+  const markersRef = useRef<Marker[]>([]);
   const tileLayerRef = useRef<TileLayer | null>(null);
   const regionLayerRef = useRef<GeoJSON | null>(null);
   const [regionGeoJson, setRegionGeoJson] = useState<any>(null);
@@ -108,17 +119,13 @@ const ItalyMap: React.FC<ItalyMapProps> = ({ cases, onSelectCase, selectedCaseId
       // Draw city markers
       const locations = selectedCase.summary?.location?.cities;
       if (locations && locations.length > 0) {
-        const caseMarkers: CircleMarker[] = [];
+        const caseMarkers: Marker[] = [];
         
         // Secondary markers
         locations.slice(1).forEach(loc => {
           if (loc.coords) {
-            const marker = L.circleMarker([loc.coords.lat, loc.coords.lng], {
-              radius: 5,
-              color: theme === 'dark' ? '#ff0000' : '#cc0000',
-              fillColor: theme === 'dark' ? '#ff0000' : '#cc0000',
-              fillOpacity: 0.7,
-              weight: 1,
+            const marker = L.marker([loc.coords.lat, loc.coords.lng], {
+              icon: triangleIcon(14, theme === 'dark' ? '#ff0000' : '#cc0000', false),
             }).addTo(map);
             marker.on('click', () => onSelectCase(selectedCase));
             marker.bindPopup(`<div class="font-sans text-sm">Località secondaria: ${loc.name}<br><strong>Caso: ${selectedCase.summary.title}</strong></div>`);
@@ -129,16 +136,12 @@ const ItalyMap: React.FC<ItalyMapProps> = ({ cases, onSelectCase, selectedCaseId
         // Primary marker
         const primaryLocation = locations[0];
         if (primaryLocation.coords) {
-          const marker = L.circleMarker([primaryLocation.coords.lat, primaryLocation.coords.lng], {
-            radius: 12,
-            color: theme === 'dark' ? '#fca5a5' : '#ef4444',
-            fillColor: theme === 'dark' ? '#fca5a5' : '#ef4444',
-            fillOpacity: 1,
-            weight: 3,
+          const marker = L.marker([primaryLocation.coords.lat, primaryLocation.coords.lng], {
+            icon: triangleIcon(28, theme === 'dark' ? '#ef4444' : '#dc2626', true),
+            zIndexOffset: 1000,
           }).addTo(map);
           marker.on('click', () => onSelectCase(selectedCase));
           marker.bindPopup(`<div class="font-sans text-base">${selectedCase.summary.title}</div>`);
-          marker.bringToFront();
           caseMarkers.unshift(marker);
 
           // Pan view to primary marker

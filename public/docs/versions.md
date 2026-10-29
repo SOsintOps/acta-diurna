@@ -23,6 +23,13 @@ persona e società di un caso compare il pulsante **IUDEX**.
   stesso nome può appartenere a persone diverse.
 - Serve Iudex con la ricerca locale (dalla versione successiva alla 0.8.1).
 
+**Niente più aggiornamenti automatici**
+
+I casi marcati come importanti non si aggiornano più da soli ogni 2 ore, e «importante» non
+scade più dopo 7 giorni. Era una funzione ereditata da Police Chronicle, mai chiesta, e
+ogni aggiornamento era una chiamata a Claude con ricerca web. Un caso si aggiorna con
+**AGGIORNA**; «importante» resta un segnale per il profilo di ricerca.
+
 ---
 
 ### Versione 0.4.0

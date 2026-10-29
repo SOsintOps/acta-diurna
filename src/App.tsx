@@ -165,51 +165,9 @@ const App: React.FC = () => {
       }
   }, [loadAndSetCases, selectedCase, setActiveAction, setError, setSelectedCase]);
 
-  const runScheduledTasks = useCallback(async () => {
-    const now = new Date();
-    const hour = now.getHours();
-
-    if (!useCaseStore.getState().isOverrideActive && (hour < 9 || hour > 17)) {
-        console.log("Auto-update skipped: outside monitoring window (9-17) and override is off.");
-        return;
-    }
-    
-    console.log("Executing periodic check for important cases...");
-    const allCases = await db.getAllCases();
-    const casesToUpdate: CaseData[] = [];
-    const updatePromises: Promise<void>[] = [];
-    
-    for (const c of allCases) {
-        if (c.isImportant) {
-            if (c.importantUntil && new Date(c.importantUntil) < now) {
-                console.log(`Auto-expiring 'Important' status for case ${c.caseID}.`);
-                updatePromises.push(db.updateCase(c.caseID, { isImportant: false, importantUntil: undefined, userFeedback: 'important' })); // keep feedback
-            } else {
-                casesToUpdate.push(c);
-            }
-        }
-    }
-
-    if (updatePromises.length > 0) {
-        await Promise.all(updatePromises);
-    }
-    
-    if (casesToUpdate.length > 0) {
-         console.log(`Found ${casesToUpdate.length} important cases to auto-update.`);
-         for (let i = 0; i < casesToUpdate.length; i++) {
-            const caseToUpdate = casesToUpdate[i];
-            console.log(`Auto-updating case: ${caseToUpdate.caseID}`);
-            await handleUpdateCase(caseToUpdate.caseID, true);
-            if (i < casesToUpdate.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-         }
-    }
-    
-    if (updatePromises.length > 0 || casesToUpdate.length > 0) {
-        await loadAndSetCases();
-    }
-  }, [handleUpdateCase, loadAndSetCases]);
+  // Nessun aggiornamento automatico dei casi importanti: veniva da Police
+  // Chronicle 1.6 e l'utente non l'ha mai chiesto (2026-10-29). Un caso si
+  // aggiorna solo con AGGIORNA.
 
   useEffect(() => {
     async function loadInitialData() {
@@ -246,15 +204,11 @@ const App: React.FC = () => {
     loadInitialData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // I timer si montano una volta sola e chiamano sempre la versione piu'
-  // recente delle funzioni. Prima dipendevano da fetchCases e
-  // runScheduledTasks, che cambiano a ogni clic su un caso: la ricerca ogni 4
-  // ore ripartiva da zero e non arrivava mai, gli aggiornamenti partivano 10
-  // secondi dopo ogni clic.
+  // Il timer si monta una volta sola e chiama sempre la versione piu' recente
+  // di fetchCases. Prima dipendeva da fetchCases, che cambia a ogni clic su un
+  // caso: la ricerca ogni 4 ore ripartiva da zero e non arrivava mai.
   const fetchCasesRef = useRef(fetchCases);
   fetchCasesRef.current = fetchCases;
-  const runScheduledTasksRef = useRef(runScheduledTasks);
-  runScheduledTasksRef.current = runScheduledTasks;
 
   useEffect(() => {
     const checkNews = () => {
@@ -266,16 +220,6 @@ const App: React.FC = () => {
     };
     const interval = setInterval(checkNews, 4 * 60 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-      const run = () => runScheduledTasksRef.current().catch(err => console.error('Scheduled tasks failed:', err));
-      const startupTimer = setTimeout(run, 10000);
-      const intervalId = setInterval(run, 120 * 60 * 1000);
-      return () => {
-          clearTimeout(startupTimer);
-          clearInterval(intervalId);
-      };
   }, []);
 
   const handleSelectCase = async (caseData: CaseData) => {
@@ -368,14 +312,10 @@ const App: React.FC = () => {
         const caso = await analyzeSingleUrl(url, allCases);
         const caseID = caso.caseID;
 
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
-
         const newCase: CaseData = {
             ...caso,
             isImportant: true,
             userFeedback: 'important',
-            importantUntil: expiryDate.toISOString(),
         };
 
         await db.addCases([newCase]);
@@ -448,10 +388,10 @@ const App: React.FC = () => {
     const newStatus = !caseToUpdate.isImportant;
     const changes: Partial<CaseData> = { isImportant: newStatus };
 
+    // «Importante» e' un segnale per il profilo di ricerca: non scade e non fa
+    // partire aggiornamenti. importantUntil si azzera per gli archivi vecchi.
+    changes.importantUntil = undefined;
     if (newStatus) {
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 7);
-        changes.importantUntil = expiryDate.toISOString();
         changes.userFeedback = 'important';
 
         const counter = (await db.getSettings('importantCaseCounter') || 0) + 1;
@@ -460,8 +400,6 @@ const App: React.FC = () => {
             await handlePromptRevision();
         }
 
-    } else {
-        changes.importantUntil = undefined;
     }
 
     await db.updateCase(caseID, changes);

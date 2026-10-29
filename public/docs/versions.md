@@ -19,6 +19,10 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
   interessa» gli arrivava come «fuori perimetro».
 - Le FAQ spiegano come viene migliorato l'algoritmo di ricerca (domanda 4), com'è
   davvero oggi. La finestra della documentazione non finisce più sotto la mappa.
+- FAQ nel formato comune ai progetti SOsintOps (quello di Exploratores): indice delle
+  domande, sezioni tematiche, una domanda per titolo. Nell'app i link dell'indice ora
+  portano alla domanda. Corrette due risposte superate: le fonti si verificano sulle pagine
+  consultate dal modello, non sui metadati di Google Search; c'è il tetto di spesa.
 
 ---
 

@@ -100,6 +100,27 @@ body.light-theme .leaflet-popup-content-wrapper, body.light-theme .leaflet-popup
 .report-content p {
    margin-bottom: 0.75rem;
 }
+/* Documentazione (FAQ, guida): sezioni ## e sottoparti ####, nel formato di Exploratores. */
+.docs-content h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.docs-content h2:first-child {
+  margin-top: 0;
+}
+.docs-content h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+}
+.docs-content table {
+  margin-bottom: 0.75rem;
+}
 .report-content strong {
   font-weight: 600;
   color: #ff0000;

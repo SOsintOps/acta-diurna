@@ -1,9 +1,27 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import { ThemeContext } from '../contexts/ThemeContext';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import PulsingTriangle from './icons/PulsingTriangle';
+import { ancoraDi, testoDi } from '../utils/ancora';
+
+// Titoli con l'ancora calcolata come su GitHub, così l'indice delle FAQ funziona anche qui.
+const titolo = (Tag: 'h2' | 'h3' | 'h4') => ({ children }: { children?: React.ReactNode }) =>
+    <Tag id={ancoraDi(testoDi(children))}>{children}</Tag>;
+
+const componentiDoc: Components = {
+    h2: titolo('h2'),
+    h3: titolo('h3'),
+    h4: titolo('h4'),
+    // I link interni scorrono la finestra senza cambiare l'indirizzo dell'app.
+    a: ({ href, children }) => href?.startsWith('#')
+        ? <a href={href} onClick={(e) => {
+            e.preventDefault();
+            document.getElementById(decodeURIComponent(href.slice(1)))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }}>{children}</a>
+        : <a href={href}>{children}</a>,
+};
 
 interface DocsModalProps {
     docInfo: { doc: string; title: string };
@@ -62,8 +80,8 @@ const DocsModal: React.FC<DocsModalProps> = ({ docInfo, onClose }) => {
                            <p>Caricamento del documento...</p>
                         </div>
                     ) : (
-                        <div className="report-content">
-                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                        <div className="report-content docs-content">
+                             <ReactMarkdown remarkPlugins={[remarkGfm]} components={componentiDoc}>{content}</ReactMarkdown>
                         </div>
                     )}
                 </div>

@@ -125,7 +125,7 @@ const ItalyMap: React.FC<ItalyMapProps> = ({ cases, onSelectCase, selectedCaseId
         locations.slice(1).forEach(loc => {
           if (loc.coords) {
             const marker = L.marker([loc.coords.lat, loc.coords.lng], {
-              icon: triangleIcon(14, theme === 'dark' ? '#ff0000' : '#cc0000', false),
+              icon: triangleIcon(9, theme === 'dark' ? '#ff0000' : '#cc0000', false),
             }).addTo(map);
             marker.on('click', () => onSelectCase(selectedCase));
             marker.bindPopup(`<div class="font-sans text-sm">Località secondaria: ${loc.name}<br><strong>Caso: ${selectedCase.summary.title}</strong></div>`);
@@ -137,7 +137,7 @@ const ItalyMap: React.FC<ItalyMapProps> = ({ cases, onSelectCase, selectedCaseId
         const primaryLocation = locations[0];
         if (primaryLocation.coords) {
           const marker = L.marker([primaryLocation.coords.lat, primaryLocation.coords.lng], {
-            icon: triangleIcon(28, theme === 'dark' ? '#ef4444' : '#dc2626', true),
+            icon: triangleIcon(16, theme === 'dark' ? '#ef4444' : '#dc2626', true),
             zIndexOffset: 1000,
           }).addTo(map);
           marker.on('click', () => onSelectCase(selectedCase));

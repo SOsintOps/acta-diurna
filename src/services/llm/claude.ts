@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getApiKey, isEnvOverrideActive } from '../apiKey';
 import { federatedAccessToken, getFederationState } from './federation';
+import { estimateCost, recordUsage } from '../usage';
 import { LlmError, type Phase, type PhaseRequest, type PhaseResult, type SourceRef } from './types';
 
 type Effort = 'low' | 'medium' | 'high';
@@ -123,6 +124,10 @@ export const runClaude = async (phase: Phase, request: PhaseRequest): Promise<Ph
 
     const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: 'user', content: request.prompt }];
     const blocks: Anthropic.Beta.BetaContentBlock[] = [];
+    // Consumo sommato su tutte le riprese della fase, registrato una volta sola
+    // alla fine, anche quando la fase fallisce: i token spesi si pagano.
+    const usage = { model, inputTokens: 0, outputTokens: 0, cacheWriteTokens: 0, cacheReadTokens: 0, webSearches: 0, webFetches: 0 };
+    let answered = false;
 
     try {
         for (let turn = 0; turn <= MAX_CONTINUATIONS; turn++) {
@@ -142,6 +147,15 @@ export const runClaude = async (phase: Phase, request: PhaseRequest): Promise<Ph
                     : {}),
             }).finalMessage();
 
+            answered = true;
+            usage.model = response.model;
+            usage.inputTokens += response.usage.input_tokens;
+            usage.outputTokens += response.usage.output_tokens;
+            usage.cacheWriteTokens += response.usage.cache_creation_input_tokens ?? 0;
+            usage.cacheReadTokens += response.usage.cache_read_input_tokens ?? 0;
+            usage.webSearches += response.usage.server_tool_use?.web_search_requests ?? 0;
+            usage.webFetches += response.usage.server_tool_use?.web_fetch_requests ?? 0;
+
             blocks.push(...response.content);
 
             if (response.stop_reason === 'pause_turn') {
@@ -157,7 +171,15 @@ export const runClaude = async (phase: Phase, request: PhaseRequest): Promise<Ph
             if (response.stop_reason === 'max_tokens') {
                 throw new LlmError('La risposta del modello e\' stata troncata: limite di lunghezza raggiunto.');
             }
-            return { text: finalText(blocks), sources: collectSources(blocks) };
+            const text = finalText(blocks);
+            if (useWeb) {
+                // Diagnostica: che cosa ha cercato il modello e che cosa ha risposto.
+                const queries = blocks
+                    .filter((b): b is Anthropic.Beta.BetaServerToolUseBlock => b.type === 'server_tool_use')
+                    .map(b => `${b.name}: ${JSON.stringify(b.input)}`);
+                console.log(`[claude] ${phase}, strumenti usati:\n${queries.join('\n')}\nrisposta:\n${text.slice(0, 3000)}`);
+            }
+            return { text, sources: collectSources(blocks) };
         }
         throw new LlmError('La ricerca non si e\' conclusa entro il numero massimo di riprese.');
     } catch (error) {
@@ -169,5 +191,9 @@ export const runClaude = async (phase: Phase, request: PhaseRequest): Promise<Ph
             throw new LlmError('Limite di richieste Claude raggiunto (quota). Riprova tra poco.');
         }
         throw error;
+    } finally {
+        if (answered) {
+            void recordUsage({ at: new Date().toISOString(), phase, ...usage, costUsd: estimateCost(usage) });
+        }
     }
 };

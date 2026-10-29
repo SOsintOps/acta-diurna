@@ -1,4 +1,5 @@
 import { runPhase, LlmError, type SourceRef } from './llm';
+import { extractJson } from '../utils/extractJson';
 import type { CaseData, DeepDiveReport, CrimeCategory } from '../types';
 import { crimeCategoryShortCodes, normalizeRegionName } from "../utils/crimeCategorizer";
 import { getActivePrompt, incrementAndGetCaseCounter, getSettings, setSettings } from '../db';
@@ -132,14 +133,13 @@ const fetchCoordinatesForCity = async (cityName: string, context?: string): Prom
             return null;
         }
 
-        const jsonString = response.text.trim().replace(/```json\s*|```/g, '');
-        const data = JSON.parse(jsonString);
+        const data: any = extractJson(response.text);
 
         if (data && typeof data.lat === 'number' && typeof data.lng === 'number' && typeof data.correctedName === 'string') {
             console.log(`Successfully geocoded "${cityName}":`, data);
             return data;
         }
-        console.warn(`Geocoding for "${cityName}" returned an invalid format:`, jsonString);
+        console.warn(`Geocoding for "${cityName}" returned an invalid format:`, response.text);
         return null;
     } catch (error) {
         console.error(`Error fetching coordinates for "${cityName}":`, error);
@@ -352,24 +352,19 @@ ${JSON.stringify(existingCases.map(c => ({ caseID: c.caseID, title: c.summary.ti
         throw new Error("The AI model returned an empty response during case generation.");
     }
 
-    let jsonString = response.text.trim();
-    const jsonStartIndex = jsonString.indexOf('[');
-    const jsonStartIndexObj = jsonString.indexOf('{');
-
-    if (jsonStartIndex !== -1 && (jsonStartIndexObj === -1 || jsonStartIndex < jsonStartIndexObj)) {
-        jsonString = jsonString.substring(jsonStartIndex);
-    } else if (jsonStartIndexObj !== -1) {
-        jsonString = jsonString.substring(jsonStartIndexObj);
-    } else {
-        return []; // It's valid for the AI to find nothing, so we don't throw an error.
+    let parsedResponse: any;
+    try {
+        parsedResponse = extractJson(response.text);
+    } catch (parseError) {
+        console.warn('[rassegna] JSON non valido nella risposta:', response.text.slice(0, 2000));
+        throw new Error(`Failed to parse intelligence data from AI model: ${(parseError as Error).message}`);
     }
-    
-    jsonString = jsonString.replace(/```json\s*|```$/g, '');
-    
-    if (jsonString.length === 0) {
+    if (parsedResponse === undefined) {
+        // Nessun JSON: e' lecito che il modello non trovi nulla.
+        console.log('[rassegna] nessun JSON nella risposta:', response.text.slice(0, 500));
         return [];
     }
-        const parsedResponse = JSON.parse(jsonString);
+    console.log(`[rassegna] ${Array.isArray(parsedResponse) ? parsedResponse.length : '?'} casi proposti, ${response.sources.length} pagine consultate`);
         let rawCases: any[] = Array.isArray(parsedResponse) ? parsedResponse : parsedResponse.cases;
         if (!Array.isArray(rawCases)) {
             throw new Error("Failed to parse intelligence data from AI model: unexpected format.");
@@ -499,8 +494,7 @@ export const analyzeSingleUrl = async (url: string, existingCases: CaseData[]): 
         throw new Error("L'analisi dell'URL non ha prodotto alcun risultato.");
     }
 
-    const cleanedJsonText = response.text.trim().replace(/^```(?:json\s*)?|```$/g, '');
-    const result = JSON.parse(cleanedJsonText);
+    const result: any = extractJson(response.text) ?? {};
     if (result.error) {
         throw new Error(result.error);
     }
@@ -601,13 +595,11 @@ export const updateCaseDetails = async (caseData: CaseData): Promise<Partial<Cas
         return {};
     }
     
-    const cleanedJsonText = response.text.trim().replace(/^```(?:json\s*)?|```$/g, '');
-    if (!cleanedJsonText || cleanedJsonText === '{}') {
+    const parsedChanges: any = extractJson(response.text);
+    if (!parsedChanges || Object.keys(parsedChanges).length === 0) {
         console.log(`No new updates found for case ${caseData.caseID}.`);
         return {};
     }
-    
-    const parsedChanges = JSON.parse(cleanedJsonText);
     const [fixedChanges] = processProvenance([parsedChanges], response.sources);
 
     if (!fixedChanges) {
@@ -805,11 +797,10 @@ export const generateDeepDiveReport = async (caseData: CaseData): Promise<DeepDi
         throw new Error("The AI model returned an empty response while generating the report.");
     }
     
-    const cleanedJsonText = response.text.trim().replace(/^```(?:json\s*)?|```$/g, '');
-    const result = JSON.parse(cleanedJsonText);
+    const result: any = extractJson(response.text) ?? {};
 
-    if (result.error) {
-        throw new Error(`AI reported an error: ${result.error}`);
+    if (result.error || typeof result.reportContent !== 'string') {
+        throw new Error(result.error ? `AI reported an error: ${result.error}` : "Failed to parse report data from AI model.");
     }
     return result as DeepDiveReport;
   } catch (e: any) {

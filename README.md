@@ -1,7 +1,7 @@
 # Acta Diurna
 
 [![CI](https://github.com/SOsintOps/acta-diurna/actions/workflows/ci.yml/badge.svg)](https://github.com/SOsintOps/acta-diurna/actions/workflows/ci.yml)
-![Versione](https://img.shields.io/badge/version-0.4.0-blue.svg)
+![Versione](https://img.shields.io/badge/version-0.5.0-blue.svg)
 ![Licenza](https://img.shields.io/badge/license-MIT-green.svg)
 
 **Dashboard OSINT per monitorare e analizzare le notizie sulle operazioni delle forze dell'ordine in Italia.**
@@ -81,6 +81,12 @@ Google Gemini.
   salvano solo se scritti nell'articolo e validi; il sesso solo se dichiarato,
   mai dedotto dal nome. Si esportano in FollowTheMoney (`.ftm`, apribile in
   Aleph) e in un pacchetto JSONL.
+
+- **Ricerca nelle sentenze con Iudex** (facoltativa, da attivare nelle impostazioni).
+  Con Iudex acceso sullo stesso computer, ogni persona e società di un caso si cerca nelle
+  sentenze della Cassazione: prima nell'archivio locale di Iudex, poi sulla Corte su
+  richiesta. Le sentenze trovate si collegano al caso. Acta Diurna parla con Iudex dal suo
+  server locale: il token di Iudex non passa mai dal browser.
 
 - **Tetto di spesa.** Le chiamate a Claude si fermano al raggiungimento di un
   tetto giornaliero, modificabile nelle impostazioni insieme al riepilogo dei

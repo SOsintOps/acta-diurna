@@ -8,6 +8,7 @@ import Dashboard from './components/Dashboard';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useCaseStore } from './store/caseStore';
 import { costruisciEntita, entitaDelCaso, unisciEntita } from './services/entita';
+import { ricercaIudexAttiva } from './services/iudex';
 import RevisionProgressModal from './components/RevisionProgressModal';
 import ArchiveOptionsModal from './components/ArchiveOptionsModal';
 import ModelSelectorModal from './components/ModelSelectorModal';
@@ -215,6 +216,7 @@ const App: React.FC = () => {
         await loadCoordinatesCache();
         // Prima di mostrare l'archivio, le entita' dei casi vecchi passano al formato comune.
         await migraEntitaArchivio().catch(err => console.error('Entity migration failed:', err));
+        useCaseStore.getState().setIudexRicerca(await ricercaIudexAttiva());
 
         // Senza chiave non si chiama il modello: si chiede la chiave e basta.
         // L'archivio gia' raccolto resta consultabile in ogni caso.

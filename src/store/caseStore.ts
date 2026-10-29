@@ -18,6 +18,9 @@ export const useCaseStore = create<CaseStore>()(
       isModelSelectorOpen: false,
       isPromptHistoryOpen: false,
       isApiKeyModalOpen: false,
+      // Ricerca in Iudex, scelta nelle impostazioni: il valore vive nel database e si
+      // carica all'avvio, qui serve solo perche' l'interfaccia si aggiorni subito.
+      iudexRicerca: false,
       aiModel: 'gemini-2.5-flash',
       // Claude e' il predefinito: le preferenze salvate fino alla 0.2.1 non
       // contengono il fornitore, quindi anche chi le ha passa a Claude.
@@ -40,6 +43,7 @@ export const useCaseStore = create<CaseStore>()(
       setIsModelSelectorOpen: (isOpen) => set({ isModelSelectorOpen: isOpen }),
       setIsPromptHistoryOpen: (isOpen) => set({ isPromptHistoryOpen: isOpen }),
       setIsApiKeyModalOpen: (isOpen) => set({ isApiKeyModalOpen: isOpen }),
+      setIudexRicerca: (attiva) => set({ iudexRicerca: attiva }),
       setAiModel: (model) => set({ aiModel: model }),
       setAiProvider: (provider) => set({ aiProvider: provider }),
     }),

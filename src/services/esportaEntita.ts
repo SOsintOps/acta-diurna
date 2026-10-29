@@ -141,6 +141,10 @@ export const esportaPacchetto = async (casi: CaseData[]): Promise<string> => {
             titolo: c.summary.title, data: c.summary.dateOfOperation, categorie: c.summary.crimeTypes,
             luoghi: c.summary.location.cities.map(x => x.name), fonti: c.provenance.map(p => p.url),
         });
+        // Sentenze di Iudex collegate dall'analista: candidati, non fusioni di identita'.
+        for (const r of c.riscontri_iudex ?? []) {
+            righe.push({ record: 'riscontro', uid: r.uid_entita, id_provvedimento: chiaveCaso(c.caseID), ...r });
+        }
     }
     tutte.persone.forEach(p => righe.push({ record: 'persona', ...p, quando }));
     tutte.societa.forEach(s => righe.push({ record: 'societa', ...s, quando }));

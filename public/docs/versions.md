@@ -4,6 +4,27 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
 
 ---
 
+### Versione 0.5.0
+*Data: 2026-10-29*
+
+**Ricerca di persone e società nelle sentenze, tramite Iudex**
+
+Con [Iudex](https://github.com/SOsintOps/Iudex) acceso sullo stesso computer, accanto a ogni
+persona e società di un caso compare il pulsante **IUDEX**.
+
+- Il pulsante cerca il nome nelle sentenze della Cassazione: prima nell'archivio locale di
+  Iudex, senza nessuna richiesta alla Corte, poi sulla Corte solo con **CERCA SULLA CORTE**.
+- Una sentenza trovata si collega al caso con **COLLEGA** e compare tra le «Sentenze
+  collegate». Entra anche nel pacchetto JSONL.
+- È **facoltativa**: si attiva in **IMPOSTAZIONI → Ricerca in Iudex** ed è spenta di partenza.
+- Non usa Claude. Ogni ricerca sulla Corte è una richiesta al server di Italgiure, una alla
+  volta.
+- Un risultato è un candidato da verificare: molti nomi nelle sentenze sono oscurati e lo
+  stesso nome può appartenere a persone diverse.
+- Serve Iudex con la ricerca locale (dalla versione successiva alla 0.8.1).
+
+---
+
 ### Versione 0.4.0
 *Data: 2026-10-29*
 

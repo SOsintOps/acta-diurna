@@ -48,6 +48,8 @@ export interface CaseData {
   entita?: EntitaCaso;
   /** Formato delle entita' fino alla 0.3: si legge solo per migrarlo. */
   entities?: EntitaLegacy;
+  /** Sentenze di Iudex collegate a persone o societa' del caso dall'analista. */
+  riscontri_iudex?: Riscontro[];
   provenance: {
     sourceType: 'Primary' | 'Secondary' | 'Tertiary';
     sourceName: string;
@@ -212,6 +214,23 @@ export interface EntitaEstratte {
   legami?: LegameEstratto[];
 }
 
+/**
+ * Un'entita' del caso trovata in una sentenza di Iudex e collegata dall'analista.
+ * E' un candidato da verificare (nomi oscurati, omonimi), non una fusione di identita'.
+ * Record `riscontro` del formato comune (italgiure-work/comune/entita-formato.md).
+ */
+export interface Riscontro {
+  uid_entita: string;
+  /** Id SentenzeWeb, la chiave comune con Iudex. */
+  id_sentenza: string;
+  ecli: string | null;
+  dove: 'locale' | 'corte';
+  frase: string;
+  quando: string;
+  mietitore: string;
+  estremi: string;
+}
+
 export interface EntitaLegacy {
   individuals: {
     name: string;
@@ -253,6 +272,7 @@ export interface CaseStore {
   isModelSelectorOpen: boolean;
   isPromptHistoryOpen: boolean;
   isApiKeyModalOpen: boolean;
+  iudexRicerca: boolean;
   aiModel: string;
   aiProvider: AiProvider;
   error: string | null;
@@ -271,6 +291,7 @@ export interface CaseStore {
   setIsModelSelectorOpen: (isOpen: boolean) => void;
   setIsPromptHistoryOpen: (isOpen: boolean) => void;
   setIsApiKeyModalOpen: (isOpen: boolean) => void;
+  setIudexRicerca: (attiva: boolean) => void;
   setAiModel: (model: string) => void;
   setAiProvider: (provider: AiProvider) => void;
 }

@@ -8,6 +8,7 @@ import { CLAUDE_PHASES } from '../services/llm/claude';
 import type { Phase } from '../services/llm/types';
 import { getDailyBudget, getUsageSummary, setDailyBudget, type UsageSummary, type UsageTotals } from '../services/usage';
 import PulsingTriangle from './icons/PulsingTriangle';
+import { impostaRicercaIudex, statoIudex } from '../services/iudex';
 
 // Dove si ottiene la chiave di ciascun fornitore, in ordine di presentazione.
 const PROVIDERS: { id: AiProvider; url: string }[] = [
@@ -153,6 +154,41 @@ const FederationStatus: React.FC<{ federation: FederationState; overrideActive: 
                 : "Federazione d'identità attiva: ha la precedenza sulla chiave salvata.")}
             {federation.state === 'error' && `Federazione configurata ma in errore: ${federation.message}`}
         </p>
+    );
+};
+
+/**
+ * Ricerca di persone e societa' nelle sentenze di Iudex: facoltativa, spenta di
+ * partenza. Accesa, mostra il pulsante IUDEX accanto alle entita' dei casi.
+ */
+const IudexPanel: React.FC<{ isOpen: boolean }> = ({ isOpen }) => {
+    const s = useStyles();
+    const { iudexRicerca, setIudexRicerca } = useCaseStore();
+    const [stato, setStato] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!isOpen || !iudexRicerca) { setStato(null); return; }
+        statoIudex().then(st => setStato(st.attivo ? `Iudex ${st.versione ?? ''} trovato su questo computer.` : 'Iudex non è in esecuzione: avvialo dalla sua finestra.'));
+    }, [isOpen, iudexRicerca]);
+
+    const cambia = async (attiva: boolean) => {
+        await impostaRicercaIudex(attiva);
+        setIudexRicerca(attiva);
+    };
+
+    return (
+        <div className={`p-3 mb-3 border rounded-md ${s.sectionBorder}`}>
+            <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+                <input type="checkbox" checked={iudexRicerca} onChange={e => cambia(e.target.checked)} />
+                Ricerca in Iudex
+            </label>
+            <p className={`text-xs mt-1 ${s.muted}`}>
+                Cerca persone e società dei casi nelle sentenze della Cassazione tramite Iudex: prima nel suo archivio
+                locale, poi sulla Corte solo quando lo chiedi. Non usa Claude; ogni ricerca sulla Corte è una richiesta
+                al server di Italgiure.
+            </p>
+            {stato && <p className={`text-xs mt-1 ${stato.startsWith('Iudex non') ? s.warn : s.ok}`}>{stato}</p>}
+        </div>
     );
 };
 
@@ -307,6 +343,8 @@ const SettingsModal: React.FC = () => {
                         isOpen={isApiKeyModalOpen}
                     />
                 ))}
+
+                <IudexPanel isOpen={isApiKeyModalOpen} />
 
                 <UsagePanel isOpen={isApiKeyModalOpen} />
 

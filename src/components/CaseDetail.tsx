@@ -9,6 +9,9 @@ import remarkGfm from 'remark-gfm';
 import { translateReport } from '../services/aiService';
 import WarningIcon from './icons/WarningIcon';
 import { dettagliSocieta, entitaDelCaso, nascitaPersona, nomePersona, nomeSocieta, ruoliDi } from '../services/entita';
+import { frasePersona, fraseSocieta, statoIudex } from '../services/iudex';
+import { useCaseStore } from '../store/caseStore';
+import IudexSearchModal, { type EntitaDaCercare } from './IudexSearchModal';
 
 interface CaseDetailProps {
   appVersion: string;
@@ -52,6 +55,23 @@ const CaseDetail: React.FC<CaseDetailProps> = ({ appVersion, caseData, onUpdateC
     const [title, setTitle] = useState('');
     const [showContent, setShowContent] = useState(false);
     const [isTranslating, setIsTranslating] = useState(false);
+    // Ricerca in Iudex: solo se l'utente l'ha attivata nelle impostazioni e Iudex e' acceso.
+    const iudexRicerca = useCaseStore(s => s.iudexRicerca);
+    const [iudexAcceso, setIudexAcceso] = useState(false);
+    const [daCercare, setDaCercare] = useState<EntitaDaCercare | null>(null);
+    useEffect(() => {
+        if (!iudexRicerca) { setIudexAcceso(false); return; }
+        statoIudex().then(s => setIudexAcceso(s.attivo));
+    }, [iudexRicerca]);
+    const pulsanteIudex = (uid: string, etichetta: string, frase: string) => iudexRicerca && iudexAcceso ? (
+        <button
+            onClick={() => setDaCercare({ uid, etichetta, frase })}
+            title="Cerca nelle sentenze di Iudex"
+            className="ml-2 px-1.5 text-[10px] font-mono border border-blue-500/60 text-blue-500 rounded hover:bg-blue-500 hover:text-white transition-colors"
+        >
+            IUDEX
+        </button>
+    ) : null;
     
     useEffect(() => {
         if (caseData) {
@@ -322,6 +342,7 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
                                                 {nascitaPersona(p) && <span className={strongMutedTextClass}>, {nascitaPersona(p)}</span>}
                                                 {p.cf && <span className={`font-mono text-xs ${strongMutedTextClass}`}> CF {p.cf}</span>}
                                             </span>
+                                            {pulsanteIudex(p.uid, nomePersona(p), frasePersona(p))}
                                         </li>
                                     ))}
                                 </ol>
@@ -338,11 +359,30 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
                                                 {ruoliDi(entita, s.uid) && <span className="font-semibold"> - {ruoliDi(entita, s.uid)}</span>}
                                                 {dettagliSocieta(s) && <span className={strongMutedTextClass}>, {dettagliSocieta(s)}</span>}
                                             </span>
+                                            {pulsanteIudex(s.uid, nomeSocieta(s), fraseSocieta(s))}
                                         </li>
                                     ))}
                                 </ol>
                             ) : <p className={strongMutedTextClass}>Nessuna azienda identificata.</p>}
                         </DetailSection>
+
+                        {(caseData.riscontri_iudex ?? []).length > 0 && (
+                            <DetailSection title="SENTENZE COLLEGATE (IUDEX)">
+                                <ul className="list-disc list-inside space-y-1 text-sm">
+                                    {(caseData.riscontri_iudex ?? []).map(r => {
+                                        const chi = entita.persone.find(p => p.uid === r.uid_entita) ?? entita.societa.find(s => s.uid === r.uid_entita);
+                                        const nome = chi ? ('ragione_sociale' in chi ? nomeSocieta(chi) : nomePersona(chi)) : '?';
+                                        return (
+                                            <li key={`${r.uid_entita}-${r.id_sentenza}`}>
+                                                {nome}: {r.estremi || r.id_sentenza}
+                                                <span className={`font-mono text-xs ${strongMutedTextClass}`}> {r.ecli ?? r.id_sentenza} ({r.dove === 'corte' ? 'Corte' : 'archivio locale'})</span>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                                <p className={`text-xs mt-1 ${strongMutedTextClass}`}>Candidati collegati dall'analista, da verificare.</p>
+                            </DetailSection>
+                        )}
 
                         {entita.legami.length > 0 && (
                             <DetailSection title="LEGAMI PERSONA-SOCIETÀ">
@@ -419,6 +459,7 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
                     </DetailSection>
                 </div>
             )}
+            {daCercare && <IudexSearchModal caso={caseData} entita={daCercare} onClose={() => setDaCercare(null)} />}
         </div>
     );
 };

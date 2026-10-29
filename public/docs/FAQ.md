@@ -8,7 +8,7 @@ Questa guida è pensata per un analista che si avvicina per la prima volta a Act
 * [1. Cos'è Acta Diurna?](#1-cosè-acta-diurna)
 * [2. Da dove provengono i dati?](#2-da-dove-provengono-i-dati)
 * [3. Quanto sono affidabili le informazioni?](#3-quanto-sono-affidabili-le-informazioni)
-* [4. Come "impara" l'intelligenza artificiale?](#4-come-impara-lintelligenza-artificiale)
+* [4. Come viene migliorato l'algoritmo di ricerca?](#4-come-viene-migliorato-lalgoritmo-di-ricerca)
 * [5. Che differenza c'è tra "AGGIORNA" e "APPROFONDIMENTO"?](#5-che-differenza-cè-tra-aggiorna-e-approfondimento)
 * [6. Che differenza c'è tra "Sovrascrivi" e "Integra" durante l'importazione?](#6-che-differenza-cè-tra-sovrascrivi-e-integra-durante-limportazione)
 * [7. Cosa succede se importo un backup di una vecchia versione?](#7-cosa-succede-se-importo-un-backup-di-una-vecchia-versione)
@@ -39,29 +39,50 @@ L'affidabilità è una priorità assoluta. Acta Diurna implementa un robusto sis
 
 Nonostante questi meccanismi di controllo, è **imperativo** che ogni informazione generata dall'IA venga **sempre verificata e validata da un analista umano** prima di essere considerata un dato di fatto o utilizzata in contesti operativi. Lo strumento è un potente acceleratore di analisi, ma non sostituisce il giudizio e la validazione finale dell'analista.
 
-### 4. Come "impara" l'intelligenza artificiale?
+### 4. Come viene migliorato l'algoritmo di ricerca?
 
-Il sistema di apprendimento è progettato per adattare le priorità di ricerca dell'IA al fine di riflettere gli interessi investigativi dell'analista. Il processo si basa su un meccanismo di feedback e revisione automatica, articolato in quattro fasi:
+Il modello di IA non viene addestrato e resta sempre lo stesso. A cambiare, in base alle tue scelte, è **il testo che riceve** a ogni rassegna. Questo succede in due modi: a ogni rassegna attraverso il *profilo*, e ogni 15 casi importanti attraverso la *revisione dei criteri*.
 
-**1. Raccolta del Feedback (Implicito ed Esplicito):**
-L'IA raccoglie continuamente feedback dalle azioni dell'analista. Ogni azione ha un peso diverso:
-- **Priorità Massima:** Un caso creato tramite **"SEGNALA URL"**. È il segnale più forte di ciò che è rilevante.
-- **Priorità Alta:** Un caso marcato come **"Importante"**.
-- **Priorità Media:** La richiesta di un **"Approfondimento"** su un caso.
-- **Feedback Negativo:** L'archiviazione di un caso come **"Irrilevante"**.
+**1. Che cosa conta come scelta**
 
-**2. Innesco della Revisione del Profilo:**
-Il processo di apprendimento non è continuo, ma viene attivato al raggiungimento di una soglia. Di default, quando l'analista ha marcato **15 nuovi casi come "Importanti"**, il sistema avvia automaticamente una revisione del suo profilo di ricerca. Questo assicura che il cambiamento sia basato su un campione significativo di feedback.
+| Che cosa fai | Come lo legge il sistema |
+|---|---|
+| **SEGNALA URL** | interesse forte: è una notizia che la ricerca non aveva trovato |
+| **IMPORTANTE** | interesse; conta anche per far partire la revisione dei criteri |
+| **APPROFONDIMENTO** | interesse |
+| Apri un caso e non fai altro | segnale debole di interesse: il caso diventa «letto» |
+| **IRRILEVANTE → Non mi interessa** | il segnale più diretto di che cosa togliere: è un'operazione vera, ma il tipo di reato o l'impatto non ti interessano |
+| **IRRILEVANTE → Fuori perimetro** | non è un'operazione già eseguita, per esempio un processo, una sentenza o un'indagine solo annunciata |
+| **IRRILEVANTE → Duplicata / Troppo vecchia** | un errore della raccolta, non una questione di gusti |
 
-**3. Processo di Revisione Strategica:**
-Quando la revisione viene attivata, succede questo:
-- Il sistema raccoglie un campione ponderato di casi (importanti, medi, standard e irrilevanti).
-- Invia questi esempi, insieme alle sue attuali istruzioni di ricerca (il "prompt"), a un'altra istanza dell'IA che agisce da "stratega".
-- L'IA "stratega" analizza i pattern comuni nei casi ad alta priorità (es. tipi di reato, aree geografiche, parole chiave specifiche, modus operandi) e li confronta con quelli irrilevanti.
-- Basandosi su questa analisi, **riscrive le istruzioni di ricerca originali**, rendendole più specifiche e mirate. Ad esempio, potrebbe aggiungere: "Dare priorità a frodi fiscali che utilizzano società sportive dilettantistiche (ASD) nel Nord Italia".
+Se apri un caso e scopri che non ti interessa, archivialo con **Non mi interessa**: altrimenti resta tra i «letti» e conta come interesse.
 
-**4. Attivazione del Nuovo Profilo:**
-Le istruzioni di ricerca appena ottimizzate diventano il nuovo **profilo di ricerca attivo** per tutte le future ricerche di notizie. Il vecchio profilo viene archiviato con un numero di versione per consentire la tracciabilità delle modifiche nel tempo. Per maggiori dettagli, vedi la domanda sulla **Gestione Prompt**.
+**2. A ogni rassegna: il profilo**
+
+Insieme ai criteri d'interesse, la rassegna manda al modello alcuni casi d'esempio presi dal tuo archivio, divisi in gruppi:
+- i 5 segnalati da te più recenti;
+- 5 importanti;
+- 10 con il report;
+- 20 letti negli ultimi tre mesi;
+- 5 archiviati come irrilevanti, con il motivo.
+
+Di ogni caso passano solo titolo, categorie e città. Il modello li usa per decidere che cosa cercare e quali notizie proporre. Il profilo non assegna punteggi e non cambia l'ordine del feed, che resta per data.
+
+**3. Ogni 15 casi importanti: la revisione dei criteri**
+
+1. Ogni IMPORTANTE fa salire un contatore; togliere il segno lo fa scendere.
+2. A 15, Claude Opus riceve i criteri attuali e fino a 15 esempi per ciascun gruppo: importanti, con report, letti, irrilevanti con il motivo.
+3. Confronta ciò che conta per te con ciò che hai scartato e **riscrive solo i criteri d'interesse**: tipi di reato, soglie, aree, schemi ricorrenti. Le regole di estrazione, il perimetro e il formato delle risposte non li può toccare.
+4. Il testo viene controllato: se non sembra un elenco di criteri, per esempio perché contiene JSON o regole di formato, viene scartato.
+5. La nuova versione entra in uso dalla rassegna successiva e il contatore torna a zero. Ogni versione resta in **GESTIONE PROMPT** (domanda 10).
+
+**4. Limiti attuali**
+
+- La nuova versione dei criteri entra in uso senza che tu la approvi; compare solo un avviso.
+- Nessuno misura se una versione porta più casi utili della precedente. Se non ti convince, rimetti in uso una versione vecchia da GESTIONE PROMPT.
+- I casi segnalati con SEGNALA URL entrano nel profilo della rassegna, ma non nella revisione dei criteri.
+- Il segnale è sottile: il modello vede solo titoli, categorie e città, non il contenuto dei casi.
+- Fino alla versione 0.5.1 i casi importanti e quelli con report non arrivavano mai al modello, per un difetto dell'archivio. Dalla 0.5.2 arrivano.
 
 ### 5. Che differenza c'è tra "AGGIORNA" e "APPROFONDIMENTO"?
 

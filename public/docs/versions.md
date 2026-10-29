@@ -17,6 +17,8 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
   interessa, separato da **«Fuori perimetro»**, per ciò che non è un'operazione già
   eseguita. Il modello riceve il motivo con il significato giusto: prima «non mi
   interessa» gli arrivava come «fuori perimetro».
+- Le FAQ spiegano come viene migliorato l'algoritmo di ricerca (domanda 4), com'è
+  davvero oggi. La finestra della documentazione non finisce più sotto la mappa.
 
 ---
 

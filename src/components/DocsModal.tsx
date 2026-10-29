@@ -43,7 +43,7 @@ const DocsModal: React.FC<DocsModalProps> = ({ docInfo, onClose }) => {
 
     return (
         <div 
-            className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center backdrop-blur-sm"
             onClick={onClose}
         >
             <div

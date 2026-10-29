@@ -1,0 +1,15 @@
+name: Proposta
+description: Una funzione nuova o un cambiamento
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Quale problema risolve
+      description: Il lavoro che oggi non si riesce a fare, o si fa male.
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Proposta

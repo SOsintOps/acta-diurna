@@ -1,5 +1,6 @@
 # Acta Diurna
 
+[![CI](https://github.com/SOsintOps/acta-diurna/actions/workflows/ci.yml/badge.svg)](https://github.com/SOsintOps/acta-diurna/actions/workflows/ci.yml)
 ![Versione](https://img.shields.io/badge/version-0.3.0-blue.svg)
 ![Licenza](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -191,6 +192,8 @@ I valori dell'interfaccia derivano da due ricostruzioni pubbliche, entrambe MIT:
 | [FAQ](public/docs/FAQ.md) | Funzionamento, capacità e limiti |
 | [Cronologia versioni](public/docs/versions.md) | Cosa è cambiato e quando |
 | [Roadmap](public/docs/todo.md) | Funzionalità previste |
+| [Sicurezza](SECURITY.md) | Modello di sicurezza e segnalazione delle vulnerabilità |
+| [Contribuire](CONTRIBUTING.md) | Ambiente, verifiche, regole del progetto |
 
 ## Limiti noti
 
@@ -200,7 +203,7 @@ I valori dell'interfaccia derivano da due ricostruzioni pubbliche, entrambe MIT:
 - **L'IA può sbagliare.** La verifica della provenienza elimina le fonti
   inventate, ma non garantisce che l'interpretazione dei fatti sia corretta.
   La validazione resta responsabilità dell'analista.
-- **Nessun test automatico**, al momento.
+- **Nessun test automatico**, al momento. La CI verifica tipi e build.
 - **Prototipo.** La numerazione 0.x è deliberata: il software non è ancora stato
   validato da un uso prolungato sul campo.
 

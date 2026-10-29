@@ -1,0 +1,8 @@
+# Fine riga LF nel repository per tutti i file di testo, qualunque sia il
+# sistema operativo di chi lavora.
+* text=auto eol=lf
+
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary

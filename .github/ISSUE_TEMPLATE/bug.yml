@@ -1,0 +1,36 @@
+name: Difetto
+description: Qualcosa non funziona come descritto
+labels: [bug]
+body:
+  - type: textarea
+    id: cosa
+    attributes:
+      label: Che cosa succede
+      description: Che cosa hai fatto, che cosa ti aspettavi, che cosa è successo.
+    validations:
+      required: true
+  - type: input
+    id: versione
+    attributes:
+      label: Versione
+      description: Si legge nell'intestazione dell'applicazione.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: fornitore
+    attributes:
+      label: Fornitore di IA
+      options: [Gemini, Claude, Non pertinente]
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser e sistema operativo
+  - type: textarea
+    id: console
+    attributes:
+      label: Messaggi nella console del browser
+      description: Togli chiavi API e dati personali prima di incollare.
+      render: text

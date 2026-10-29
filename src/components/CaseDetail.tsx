@@ -244,7 +244,7 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
             <div className="flex-grow">
                 <div className="flex items-center mb-4">
                     <PulsingTriangle className="w-6 h-6 text-red-600 mr-4" />
-                    <div className="text-2xl font-medium flex-1 h-12 flex items-center">
+                    <div className="text-xl font-medium flex-1 min-h-12 flex items-center">
                         {title && <AnimatedText text={title} mode="word" speed={100} onComplete={handleTitleAnimationComplete} />}
                          {caseData.isImportant && <StarIcon className="w-5 h-5 text-yellow-400 ml-3 flex-shrink-0" />}
                     </div>

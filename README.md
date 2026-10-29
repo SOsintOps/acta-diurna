@@ -1,7 +1,7 @@
 # Acta Diurna
 
 [![CI](https://github.com/SOsintOps/acta-diurna/actions/workflows/ci.yml/badge.svg)](https://github.com/SOsintOps/acta-diurna/actions/workflows/ci.yml)
-![Versione](https://img.shields.io/badge/version-0.5.1-blue.svg)
+![Versione](https://img.shields.io/badge/version-0.5.2-blue.svg)
 ![Licenza](https://img.shields.io/badge/license-MIT-green.svg)
 
 **Dashboard OSINT per monitorare e analizzare le notizie sulle operazioni delle forze dell'ordine in Italia.**

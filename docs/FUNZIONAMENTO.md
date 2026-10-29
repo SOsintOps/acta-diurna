@@ -1,6 +1,6 @@
 # Acta Diurna — requisiti e funzionamento
 
-Questo documento descrive che cosa fa Acta Diurna e come lo fa, nella versione **0.5.1**.
+Questo documento descrive che cosa fa Acta Diurna e come lo fa, nella versione **0.5.2**.
 È la descrizione del prodotto com'è nel codice: ogni requisito qui sotto è implementato,
 salvo quelli elencati in fondo, in [Limiti noti](#10-limiti-noti).
 
@@ -129,7 +129,7 @@ Cassazione.
 | R6.2 | **Mappa**: la regione del caso è evidenziata; la città principale è un triangolo rosso grande, le altre località triangoli piccoli. |
 | R6.3 | **Dettaglio**: riepilogo, date, forze coinvolte, località, persone (con ruolo, posizione, nascita, CF), società, legami, fonti e sentenze collegate da Iudex. |
 | R6.4 | **IMPORTANTE**: segnale per il profilo di ricerca. Non scade e non fa partire aggiornamenti. |
-| R6.5 | **IRRILEVANTE**: archivia il caso con il motivo (duplicato, troppo vecchio, fuori perimetro), che entra nel profilo come esempio da evitare. |
+| R6.5 | **IRRILEVANTE**: archivia il caso con un motivo, che entra nel profilo come esempio da evitare: *Notizia duplicata*, *Notizia troppo vecchia*, **Non mi interessa** (un'operazione vera, ma tipo di reato o impatto non interessano), *Fuori perimetro* (non un'operazione già eseguita: processo, sentenza, indagine solo annunciata), *Altro*. Al modello il motivo arriva con questo significato. |
 | R6.6 | **AGGIORNA**: cerca sul web sviluppi e dati mancanti del caso, prima di tutto persone e società. Le fonti e le entità nuove si aggiungono a quelle esistenti. Parte solo su richiesta. |
 | R6.7 | **SEGNALA URL**: l'analista incolla l'indirizzo di un articolo; il modello lo legge e ne fa un caso «manuale», segnato importante. Il report non parte da solo: si avvia con APPROFONDIMENTO. Un articolo fuori perimetro o già in archivio viene rifiutato con un messaggio. |
 | R6.8 | **Un solo lavoro con il modello alla volta**: rassegna, aggiornamento e analisi di un URL non partono insieme. |
@@ -145,7 +145,8 @@ Cassazione.
 | R7.5 | Dopo il report, una seconda chiamata breve ne estrae persone, società e legami a schema, che si uniscono al caso (R5.9). |
 | R7.6 | **Traduzione** del report in inglese professionale. Conserva il Markdown e rende i termini di probabilità e le qualifiche processuali con i termini inglesi corretti. |
 | R7.7 | **ESPORTA NOTIZIA**: scheda del caso in RTF. |
-| R7.8 | **Apprendimento**: ogni 15 casi marcati importanti, il modello rivede i **criteri d'interesse** in base alle scelte dell'analista. Riscrive solo i criteri, mai le regole di estrazione o la forma dell'uscita. Una revisione che non sembra un elenco di criteri si rifiuta. |
+| R7.7b | **Profilo** allegato a ogni rassegna: titolo, categorie e città di casi d'esempio presi dall'archivio, divisi in gruppi. *Segnalati* da SEGNALA URL (5 più recenti); *importanti* (5); *con report* (10); *letti* negli ultimi 3 mesi, né importanti né archiviati (20); *irrilevanti* con il motivo (5). Aprire un caso lo rende «letto», quindi un segnale debole di interesse; per dire che un caso non interessa si usa IRRILEVANTE → *Non mi interessa*. Il profilo indirizza ricerca e scelta dei casi; non dà punteggi e non riordina il feed. |
+| R7.8 | **Apprendimento**: ogni 15 casi marcati importanti (togliere il segno annulla il voto), il modello rivede i **criteri d'interesse** in base alle scelte dell'analista. Riscrive solo i criteri, mai le regole di estrazione o la forma dell'uscita. Una revisione che non sembra un elenco di criteri si rifiuta. |
 | R7.9 | **Cronologia dei criteri** in GESTIONE PROMPT: ogni versione si confronta e si ripristina. |
 
 ## 8. Ricerca nelle sentenze con Iudex
@@ -192,9 +193,6 @@ Cassazione.
   non si misura. Una raccolta da feed RSS è allo studio.
 - **Timer della rassegna.** Ogni 4 ore e solo con la scheda aperta: non ci sono composizioni
   a orari fissi né il recupero di quelle saltate.
-- **Profilo di ricerca incompleto.** Gli esempi «importanti» e «con report» del profilo
-  arrivano vuoti: l'archivio cerca quei casi con un indice che non vede i valori booleani.
-  Il profilo si basa quindi solo sui casi letti e sugli irrilevanti.
 - **Apprendimento.** Riscrive i criteri d'interesse; non riordina la rassegna in base alle
   preferenze dell'analista.
 - **Qualità.** Mancano il conteggio dei falsi positivi e il registro dei casi mancati.

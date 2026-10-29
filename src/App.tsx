@@ -399,7 +399,11 @@ const App: React.FC = () => {
         if (counter >= 15) {
             await handlePromptRevision();
         }
-
+    } else {
+        // Togliere il segno annulla il voto: senza, mettere e togliere lo stesso
+        // caso faceva arrivare prima la revisione dei criteri.
+        const counter = (await db.getSettings('importantCaseCounter') || 0) - 1;
+        await db.setSettings('importantCaseCounter', Math.max(0, counter));
     }
 
     await db.updateCase(caseID, changes);

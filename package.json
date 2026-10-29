@@ -1,6 +1,6 @@
 {
   "name": "acta-diurna",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "description": "Dashboard OSINT che monitora fonti giornalistiche italiane per individuare e analizzare operazioni delle forze dell'ordine, strutturandole in casi di intelligence.",
@@ -39,6 +39,7 @@
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "fake-indexeddb": "^6.2.6",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.0",

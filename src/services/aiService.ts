@@ -308,12 +308,20 @@ const nuovoCaseID = async (categorie: CrimeCategory[], manuale = false): Promise
 
 // --- Profilo e casi esistenti nel messaggio --------------------------------
 
+// Il motivo con cui l'analista ha archiviato un caso, come lo deve capire il modello.
+const MOTIVI_IRRILEVANZA: Record<string, string> = {
+    irrelevant_duplicate: "duplicato di un caso già in archivio",
+    irrelevant_too_old: "notizia troppo vecchia",
+    irrelevant_not_crime: "non interessa all'analista: il tipo di reato o l'impatto",
+    irrelevant_out_of_scope: "fuori perimetro: non è un'operazione già eseguita",
+};
+
 const summarizeCasesForPrompt = (cases: CaseData[], showFeedback: boolean = false): string => {
     if (cases.length === 0) return "nessuno";
     return cases.map(c => {
         let summary = `- ${c.summary.title} (${c.summary.crimeTypes.join(', ')}, ${c.summary.location.cities[0]?.name ?? 'luogo non indicato'})`;
         if (showFeedback && c.userFeedback?.startsWith('irrelevant_')) {
-            const motivo = { irrelevant_duplicate: 'duplicato', irrelevant_too_old: 'troppo vecchio', irrelevant_not_crime: 'fuori perimetro' }[c.userFeedback as string];
+            const motivo = MOTIVI_IRRILEVANZA[c.userFeedback as string];
             if (motivo) summary += ` [motivo: ${motivo}]`;
         }
         return summary;
@@ -510,7 +518,7 @@ ${summarizeCasesForPrompt(highPriorityExamples)}
 ${summarizeCasesForPrompt(mediumPriorityExamples)}
 - letti:
 ${summarizeCasesForPrompt(standardExamples)}
-- archiviati come irrilevanti, da evitare:
+- archiviati come irrilevanti, da evitare (con il motivo: quelli che non interessano all'analista indicano temi da non cercare):
 ${summarizeCasesForPrompt(irrelevantExamples, true)}
 
 Casi già in archivio negli ultimi ${DEDUP_WINDOW_DAYS} giorni, da non ripetere: ${casiEsistenti(existingCases)}`;
@@ -779,7 +787,7 @@ Caso da analizzare: ${JSON.stringify({ ...casoPerIlModello(caseData), provenance
 
 const SISTEMA_REVISIONE = `Rivedi i criteri di interesse di una rassegna stampa OSINT sulle operazioni delle forze dell'ordine in Italia, per Acta Diurna, in base alle scelte dell'analista che la usa. I criteri dicono che cosa interessa: tipi di reato, soglie, aree, schemi. Le regole di estrazione, il perimetro e la forma dell'uscita stanno altrove e non vanno scritti qui.
 
-Guarda che cosa hanno in comune i casi che l'analista ha segnato come importanti o approfondito, e che cosa li distingue da quelli letti e da quelli archiviati come irrilevanti, con il motivo quando c'è (troppo vecchio, duplicato, fuori perimetro). Rendi più espliciti i criteri che spiegano le sue scelte e togli o restringi quelli che portano a notizie scartate. Se il feedback è poco, cambia poco.
+Guarda che cosa hanno in comune i casi che l'analista ha segnato come importanti o approfondito, e che cosa li distingue da quelli letti e da quelli archiviati come irrilevanti, con il motivo quando c'è (duplicato, troppo vecchio, non interessa all'analista, fuori perimetro). I casi che non interessano all'analista sono il segnale più diretto di che cosa togliere o restringere. Rendi più espliciti i criteri che spiegano le sue scelte e togli o restringi quelli che portano a notizie scartate. Se il feedback è poco, cambia poco.
 
 Risposta: solo il testo dei nuovi criteri, in italiano, in prosa, senza preambolo e senza commenti.`;
 

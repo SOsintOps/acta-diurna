@@ -108,8 +108,13 @@ export const getCase = async (caseID: string): Promise<CaseData | undefined> => 
  * @param limit - The maximum number of examples to retrieve.
  */
 export const getImportantExamples = async (limit: number = 5): Promise<CaseData[]> => {
-    // Dexie uses 0 for false and 1 for true when indexing booleans
-    return await db.cases.where('isImportant').equals(1).reverse().limit(limit).toArray();
+    // IndexedDB non indicizza i valori booleani: un indice su isImportant non contiene
+    // nessun caso salvato con true, e where('isImportant').equals(1) non ne trovava
+    // mai. Si filtra sul valore, dal caso aggiornato per ultimo.
+    return await db.cases.orderBy('lastUpdateTimestamp').reverse()
+        .filter(c => c.isImportant === true)
+        .limit(limit)
+        .toArray();
 };
 
 /**
@@ -118,11 +123,9 @@ export const getImportantExamples = async (limit: number = 5): Promise<CaseData[
  * @param limit - The maximum number of examples to retrieve.
  */
 export const getMediumPriorityExamples = async (limit: number = 10): Promise<CaseData[]> => {
-    // Dexie uses 0 for false and 1 for true when indexing booleans
-    return await db.cases
-        .where('hasReport').equals(1)
-        .and(c => c.isImportant !== true && c.status !== 'Archived')
-        .reverse()
+    // Come per gli importanti: filtro sul valore, non sull'indice dei booleani.
+    return await db.cases.orderBy('lastUpdateTimestamp').reverse()
+        .filter(c => c.hasReport === true && c.isImportant !== true && c.status !== 'Archived')
         .limit(limit)
         .toArray();
 };

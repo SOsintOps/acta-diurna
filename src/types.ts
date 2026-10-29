@@ -12,7 +12,9 @@ export enum CrimeCategory {
   OTHER = 'OTHER',
 }
 
-export type UserFeedback = 'important' | 'irrelevant' | 'irrelevant_duplicate' | 'irrelevant_too_old' | 'irrelevant_not_crime';
+// irrelevant_not_crime e' «Non mi interessa» (tema o impatto): il nome del codice
+// resta quello storico perche' gli archivi lo usano.
+export type UserFeedback = 'important' | 'irrelevant' | 'irrelevant_duplicate' | 'irrelevant_too_old' | 'irrelevant_not_crime' | 'irrelevant_out_of_scope';
 
 export interface CaseData {
   caseID: string;

@@ -4,6 +4,22 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
 
 ---
 
+### Versione 0.5.2
+*Data: 2026-10-29*
+
+**L'apprendimento usa davvero le tue scelte**
+
+- I casi che segni **importanti** e quelli con il **report** arrivano finalmente al modello
+  come esempi. Prima l'archivio li cercava con un indice che non vede i valori sì/no, e
+  non li trovava mai: segnare un caso importante lo faceva perfino uscire dal profilo.
+- Togliere il segno di importante annulla il voto per la revisione dei criteri.
+- Nell'archiviazione c'è **«Non mi interessa»**, per un'operazione vera che però non ti
+  interessa, separato da **«Fuori perimetro»**, per ciò che non è un'operazione già
+  eseguita. Il modello riceve il motivo con il significato giusto: prima «non mi
+  interessa» gli arrivava come «fuori perimetro».
+
+---
+
 ### Versione 0.5.1
 *Data: 2026-10-29*
 

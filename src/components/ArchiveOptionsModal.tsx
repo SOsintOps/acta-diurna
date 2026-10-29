@@ -63,9 +63,19 @@ const ArchiveOptionsModal: React.FC<ArchiveOptionsModalProps> = ({ onArchive, on
                         onClick={() => onArchive('irrelevant_not_crime')}
                         className={`${optionButtonClass} ${optionButtonTheme}`}
                     >
-                        <h3 className={`text-base font-bold`}>Non è un Crimine Rilevante</h3>
+                        <h3 className={`text-base font-bold`}>Non mi interessa</h3>
                         <p className={`text-xs mt-1 ${mutedTextColor}`}>
-                           La tipologia di reato o l'impatto della notizia non sono di interesse.
+                           È un'operazione vera, ma il tipo di reato o l'impatto non mi interessano: l'IA eviterà notizie simili.
+                        </p>
+                    </button>
+
+                    <button
+                        onClick={() => onArchive('irrelevant_out_of_scope')}
+                        className={`${optionButtonClass} ${optionButtonTheme}`}
+                    >
+                        <h3 className={`text-base font-bold`}>Fuori perimetro</h3>
+                        <p className={`text-xs mt-1 ${mutedTextColor}`}>
+                           Non è un'operazione delle forze dell'ordine già eseguita: un processo, una sentenza, un'indagine solo annunciata.
                         </p>
                     </button>
                     <button

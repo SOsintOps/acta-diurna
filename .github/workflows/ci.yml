@@ -23,6 +23,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      - run: npm test
       - run: npm run build
       # Una build fatta senza .env non deve contenere chiavi: se ne compare
       # una, qualcosa le ha compilate nel bundle.

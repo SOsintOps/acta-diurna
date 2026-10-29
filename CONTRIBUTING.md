@@ -17,6 +17,7 @@ Serve una chiave API di Gemini o di Claude, da inserire dall'interfaccia.
 
 ```bash
 npm run typecheck
+npm test
 npm run build
 ```
 

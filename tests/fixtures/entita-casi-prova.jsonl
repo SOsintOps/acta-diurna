@@ -1,0 +1,14 @@
+{"tipo": "persona", "ingresso": {"nome": "Mario Rossi", "cf": "RSSMRA80A01H501U"}, "uid": "600a3160fa0b0667", "nota": "CF valido"}
+{"tipo": "persona", "ingresso": {"nome": "Mario Rossi", "cf": "RSSMRA80A01H501X", "data_nascita": "1980-01-01", "luogo_nascita": "Roma"}, "uid": "07c8b801860c11e1", "nota": "CF con controllo errato: si usa la data"}
+{"tipo": "persona", "ingresso": {"nome": "FIORE ANDREA", "data_nascita": "1975-06-30", "luogo_nascita": "Reggio Calabria (RC)"}, "uid": "148e1d90c4a46703", "nota": "parole invertite e provincia"}
+{"tipo": "persona", "ingresso": {"nome": "Andrea Fiore", "data_nascita": "1975-06-30", "luogo_nascita": "reggio calabria"}, "uid": "148e1d90c4a46703", "nota": "stessa persona del caso precedente"}
+{"tipo": "persona", "ingresso": {"nome": "Niccolò D'Angelo", "data_nascita": "1990-12-01"}, "uid": "3db7f006079aace0", "nota": "accenti, apostrofo, luogo mancante"}
+{"tipo": "persona", "ingresso": {"nome": "Carlo Bianchi", "provvedimento": "acta:20261029-ORG-002"}, "uid": "a4219125fbabf260", "nota": "senza data: legata al caso"}
+{"tipo": "persona", "ingresso": {"nome": "Carlo Bianchi", "provvedimento": "snpen2026531751S"}, "uid": "7a1eec70f03b5c86", "nota": "senza data: legata alla sentenza"}
+{"tipo": "persona", "ingresso": {"nome": "Giuseppe Verdi", "data_nascita": "1813-10", "provvedimento": "acta:X"}, "uid": "813a3e5d91ca4c4c", "nota": "data incompleta: legata al caso"}
+{"tipo": "societa", "ingresso": {"ragione_sociale": "Alfa", "piva": "01234567897"}, "uid": "516c19cb84e96396", "nota": "P.IVA valida"}
+{"tipo": "societa", "ingresso": {"ragione_sociale": "Alfa", "piva": "01234567890", "forma": "S.r.l."}, "uid": "9e933d7b254c1112", "nota": "P.IVA errata: si usa la forma"}
+{"tipo": "societa", "ingresso": {"ragione_sociale": "Alfa", "forma": "srl", "rea": "mi-0123456"}, "uid": "1b5c261bebb7b2e7", "nota": "REA normalizzato"}
+{"tipo": "societa", "ingresso": {"ragione_sociale": "Alfa", "forma": "srl"}, "uid": "9e933d7b254c1112", "nota": "stessa societa' del caso con P.IVA errata: S.r.l. = srl"}
+{"tipo": "societa", "ingresso": {"ragione_sociale": "Vigilanza Romana Società", "forma": "S.p.A."}, "uid": "edde5031ba82d95c", "nota": "ragione sociale con accenti"}
+{"tipo": "societa", "ingresso": {"ragione_sociale": "Edil Costruzioni", "provvedimento": "acta:20261029-OTH-001"}, "uid": "9f498d52fa242fdc", "nota": "generica: legata al caso"}

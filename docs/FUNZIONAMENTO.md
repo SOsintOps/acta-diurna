@@ -1,6 +1,6 @@
 # Acta Diurna — requisiti e funzionamento
 
-Questo documento descrive che cosa fa Acta Diurna e come lo fa, nella versione **0.5.0**.
+Questo documento descrive che cosa fa Acta Diurna e come lo fa, nella versione **0.5.1**.
 È la descrizione del prodotto com'è nel codice: ogni requisito qui sotto è implementato,
 salvo quelli elencati in fondo, in [Limiti noti](#10-limiti-noti).
 
@@ -64,7 +64,7 @@ e non ha legami con forze dell'ordine o enti pubblici.
 | Rassegna | Sonnet 5.5 | medio | al massimo 6 | CERCA ORA, o ogni 4 ore |
 | Analisi di un URL | Sonnet 5.5 | medio | al massimo 3 | SEGNALA URL |
 | Aggiornamento di un caso | Sonnet 5.5 | medio | al massimo 5 | AGGIORNA |
-| Report di approfondimento | Opus 5.5 | alto | al massimo 10 | APPROFONDIMENTO, SEGNALA URL |
+| Report di approfondimento | Opus 5.5 | alto | al massimo 10 | APPROFONDIMENTO |
 | Entità dal report | Sonnet 5.5 | basso | — | dopo ogni report |
 | Revisione dei criteri | Opus 5.5 | alto | — | ogni 15 casi importanti |
 | Traduzione | Sonnet 5.5 | basso | — | sul report, su richiesta |
@@ -131,7 +131,7 @@ Cassazione.
 | R6.4 | **IMPORTANTE**: segnale per il profilo di ricerca. Non scade e non fa partire aggiornamenti. |
 | R6.5 | **IRRILEVANTE**: archivia il caso con il motivo (duplicato, troppo vecchio, fuori perimetro), che entra nel profilo come esempio da evitare. |
 | R6.6 | **AGGIORNA**: cerca sul web sviluppi e dati mancanti del caso, prima di tutto persone e società. Le fonti e le entità nuove si aggiungono a quelle esistenti. Parte solo su richiesta. |
-| R6.7 | **SEGNALA URL**: l'analista incolla l'indirizzo di un articolo; il modello lo legge e ne fa un caso «manuale», segnato importante. Subito dopo parte il report di approfondimento. Un articolo fuori perimetro o già in archivio viene rifiutato con un messaggio. |
+| R6.7 | **SEGNALA URL**: l'analista incolla l'indirizzo di un articolo; il modello lo legge e ne fa un caso «manuale», segnato importante. Il report non parte da solo: si avvia con APPROFONDIMENTO. Un articolo fuori perimetro o già in archivio viene rifiutato con un messaggio. |
 | R6.8 | **Un solo lavoro con il modello alla volta**: rassegna, aggiornamento e analisi di un URL non partono insieme. |
 
 ## 7. Approfondimento e apprendimento

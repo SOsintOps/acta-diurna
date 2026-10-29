@@ -4,6 +4,15 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
 
 ---
 
+### Versione 0.5.1
+*Data: 2026-10-29*
+
+- **SEGNALA URL** crea solo il caso: il report di approfondimento, la chiamata più cara, non
+  parte più da solo e si avvia con **APPROFONDIMENTO**.
+- I **legami persona–società** restano: servono alla compatibilità con Iudex e Praeco.
+
+---
+
 ### Versione 0.5.0
 *Data: 2026-10-29*
 

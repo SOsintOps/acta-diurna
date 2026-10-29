@@ -310,7 +310,6 @@ const App: React.FC = () => {
         // analyzeSingleUrl restituisce il caso gia' completo: ID, luoghi
         // geocodificati, categorie convalidate, entita' nel formato comune.
         const caso = await analyzeSingleUrl(url, allCases);
-        const caseID = caso.caseID;
 
         const newCase: CaseData = {
             ...caso,
@@ -321,8 +320,9 @@ const App: React.FC = () => {
         await db.addCases([newCase]);
         await loadAndSetCases();
         setSelectedCase(newCase);
-        
-        await handleGenerateReport(caseID);
+        // Il report non parte da solo: era un comportamento ereditato da Police
+        // Chronicle, e il report con Opus e' la chiamata piu' cara. Si avvia con
+        // APPROFONDIMENTO (scelta dell'utente del 2026-10-29).
 
     } catch (err: any) {
         console.error("Failed to process reported URL:", err);

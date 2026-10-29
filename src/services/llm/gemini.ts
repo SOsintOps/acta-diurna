@@ -37,6 +37,7 @@ export const runGemini = async (model: string, request: PhaseRequest): Promise<P
         model,
         contents: request.prompt,
         config: {
+            ...(request.system ? { systemInstruction: request.system } : {}),
             ...(request.webSearch ? { tools: [{ googleSearch: {} }] } : {}),
             ...(request.schema ? { responseMimeType: 'application/json', responseJsonSchema: request.schema } : {}),
         },

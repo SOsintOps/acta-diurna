@@ -1,6 +1,37 @@
 
 import type { CaseData, Settings, PromptHistoryEntry } from '../types';
 import { normalizeRegionName } from './crimeCategorizer';
+import { costruisciEntita, daLegacy } from '../services/entita';
+import { getAllCases, updateCase } from '../db';
+
+/**
+ * Entita' del formato fino alla 0.3 (entities.individuals / companies) nel
+ * formato comune con Iudex e Praeco. Restituisce null se il caso e' gia'
+ * migrato. Non si fa in un upgrade di Dexie perche' gli uid si calcolano con
+ * crypto.subtle, asincrono: dentro la transazione la chiuderebbe a meta'.
+ */
+export const migraEntita = async (c: CaseData): Promise<CaseData | null> => {
+    if (c.entita) return null;
+    const entita = await costruisciEntita(daLegacy(c.entities), {
+        caseID: c.caseID, dataArticolo: c.summary?.dateOfOperation ?? null,
+    }, 'migrazione');
+    const { entities: _vecchie, ...resto } = c;
+    return { ...resto, entita };
+};
+
+/** All'avvio: migra le entita' dei casi gia' in archivio. Restituisce quanti ne ha migrati. */
+export const migraEntitaArchivio = async (): Promise<number> => {
+    let migrati = 0;
+    for (const c of await getAllCases()) {
+        const nuovo = await migraEntita(c);
+        if (!nuovo) continue;
+        // entities a undefined: Dexie toglie il campo dal record.
+        await updateCase(c.caseID, { entita: nuovo.entita, entities: undefined });
+        migrati++;
+    }
+    if (migrati > 0) console.log(`[migrazione] Entità migrate al formato comune in ${migrati} casi.`);
+    return migrati;
+};
 
 /**
  * Checks if a location object uses the old format (e.g., `{ city: 'Milan' }`)
@@ -68,6 +99,15 @@ export const migrateImportedData = async (data: any): Promise<{ migratedData: { 
         if (isMigratedNow) wasMigrated = true;
         return migratedCase;
     });
+
+    // 1b. Entita' nel formato comune con Iudex e Praeco.
+    for (let i = 0; i < migratedCases.length; i++) {
+        const nuovo = await migraEntita(migratedCases[i]);
+        if (nuovo) {
+            migratedCases[i] = nuovo;
+            wasMigrated = true;
+        }
+    }
 
     // 2. Migrate settings, specifically the prompt history.
     const promptHistorySetting = data.settings.find((s: any) => s.key === 'promptHistory');

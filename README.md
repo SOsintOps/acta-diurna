@@ -1,7 +1,7 @@
 # Acta Diurna
 
 [![CI](https://github.com/SOsintOps/acta-diurna/actions/workflows/ci.yml/badge.svg)](https://github.com/SOsintOps/acta-diurna/actions/workflows/ci.yml)
-![Versione](https://img.shields.io/badge/version-0.3.0-blue.svg)
+![Versione](https://img.shields.io/badge/version-0.4.0-blue.svg)
 ![Licenza](https://img.shields.io/badge/license-MIT-green.svg)
 
 **Dashboard OSINT per monitorare e analizzare le notizie sulle operazioni delle forze dell'ordine in Italia.**
@@ -73,6 +73,19 @@ Google Gemini.
   di ricerca. In alternativa Gemini, con un modello unico. Un errore di quota
   su un fornitore non blocca il lavoro.
 
+- **Persone e società in un formato comune con Iudex.** Le entità dei casi
+  (persone, società ed enti, ruoli, posizioni nel procedimento, legami
+  persona–società) seguono lo stesso modello e gli stessi identificativi di
+  [Iudex](https://github.com/SOsintOps/Iudex), così i dati si scambiano e si
+  incrociano con le sentenze della Cassazione. Codice fiscale e partita IVA si
+  salvano solo se scritti nell'articolo e validi; il sesso solo se dichiarato,
+  mai dedotto dal nome. Si esportano in FollowTheMoney (`.ftm`, apribile in
+  Aleph) e in un pacchetto JSONL.
+
+- **Tetto di spesa.** Le chiamate a Claude si fermano al raggiungimento di un
+  tetto giornaliero, modificabile nelle impostazioni insieme al riepilogo dei
+  consumi.
+
 - **Import/export e fusione.** L'intero archivio si esporta in JSON. In fase di
   importazione si può sovrascrivere l'archivio locale oppure *integrarlo*,
   fondendo casi, impostazioni e cronologia di apprendimento provenienti da più
@@ -84,7 +97,7 @@ Google Gemini.
 
 ## Requisiti
 
-- **Node.js 20** o successivo
+- **Node.js 22.12** o successivo
 - Una chiave API del fornitore scelto, da inserire dall'interfaccia al primo
   avvio:
   - **Anthropic Claude**, predefinito ([platform.claude.com](https://platform.claude.com/settings/keys)):

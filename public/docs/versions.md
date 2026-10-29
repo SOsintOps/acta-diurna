@@ -4,6 +4,68 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
 
 ---
 
+### Versione 0.4.0
+*Data: 2026-10-29*
+
+**Persone e società compatibili con Iudex**
+
+Le entità dei casi seguono ora il formato comune con Iudex e Praeco, per
+scambiare i dati e incrociarli in futuro con le sentenze della Cassazione.
+
+- **Persone**:
+  - nome e cognome separati quando l'articolo li distingue con certezza;
+  - data e luogo di nascita;
+  - codice fiscale, solo se scritto nell'articolo e con il carattere di
+    controllo giusto;
+  - sesso, solo se l'articolo lo dichiara («nato», «nata», «l'indagata»), mai
+    dedotto dal nome;
+  - con la sola età, i due anni di nascita possibili.
+- **Società ed enti**:
+  - forma giuridica separata;
+  - partita IVA, codice fiscale e REA, solo se scritti e validi;
+  - sede, stato (sotto sequestro, fallita), attività e valore dei beni.
+- **Ruolo e posizione nel procedimento** (indagato, arrestato, ai domiciliari)
+  stanno sulla citazione della persona nel caso, come in Iudex.
+- **Legami persona–società**: amministratore, socio, prestanome.
+- **Identità stabile.** Ogni persona e società ha un identificativo calcolato
+  come in Iudex e Praeco: la stessa persona, scritta «FIORE ANDREA» o «Andrea
+  Fiore», è una sola.
+- **Esportazione.** I pulsanti **ESPORTA FTM** ed **ESPORTA JSONL** salvano
+  persone, società e casi in FollowTheMoney (si aprono in Aleph) e nel
+  pacchetto di scambio delle tre app.
+- Gli archivi esistenti si convertono da soli alla prima apertura.
+
+**Istruzioni ai modelli riscritte per Claude**
+
+- Le regole fisse stanno a parte e Claude le tiene in cache: costano un decimo
+  dalla seconda chiamata.
+- I reati si classificano solo nelle nove categorie dell'applicazione.
+- Una fonte è accettata solo se il suo indirizzo è tra le pagine davvero
+  consultate. Prima il confronto tra i titoli aveva attribuito a un caso la
+  pagina di Wikipedia sul pool antimafia.
+- Il report di approfondimento è testo semplice e non più un JSON. Le entità si
+  estraggono dal report con una seconda chiamata breve.
+- La revisione del profilo di ricerca riscrive solo i criteri d'interesse e non
+  può più toccare le regole.
+
+**Spesa sotto controllo**
+
+- **Nessuna rassegna automatica all'apertura**: si avvia con «CERCA ORA».
+- **Tetto di spesa giornaliero** (predefinito 1 $), modificabile nelle
+  impostazioni. Raggiunto il tetto, nessuna chiamata parte fino al giorno dopo.
+- **Rassegna più leggera**: al massimo 6 ricerche, siti non giornalistici
+  esclusi, nel prompt solo i casi degli ultimi 60 giorni.
+
+**Correzioni**
+
+- La ricerca automatica ogni 4 ore non partiva mai: il timer ripartiva a ogni
+  clic su un caso.
+- Gli aggiornamenti automatici partivano 10 secondi dopo ogni clic.
+- Rassegna, aggiornamenti e analisi di un URL non partono più insieme.
+- Città senza doppioni nei casi nuovi.
+
+---
+
 ### Versione 0.3.0
 *Data: 2026-10-29*
 

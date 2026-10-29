@@ -1,6 +1,7 @@
 import { runPhase, LlmError, type SourceRef } from './llm';
 import { extractJson } from '../utils/extractJson';
-import type { CaseData, DeepDiveReport, CrimeCategory } from '../types';
+import { CrimeCategory, type CaseData, type DeepDiveReport, type EntitaEstratte } from '../types';
+import { costruisciEntita, entitaDelCaso, unisciEntita } from './entita';
 import { crimeCategoryShortCodes, normalizeRegionName } from "../utils/crimeCategorizer";
 import { getActivePrompt, incrementAndGetCaseCounter, getSettings, setSettings } from '../db';
 
@@ -109,24 +110,13 @@ const geocodeSchema = {
 };
 
 const fetchCoordinatesForCity = async (cityName: string, context?: string): Promise<{ lat: number; lng: number; correctedName: string } | null> => {
-    let prompt;
-
-    if (context) {
-        console.log(`Geocoding with context: "${cityName}" (Context: "${context}")`);
-        prompt = `
-            Un'operazione di polizia ha avuto luogo in una località chiamata "${cityName}". Questo nome potrebbe essere una frazione, un nome obsoleto o errato.
-            Il titolo della notizia è: "${context}".
-            Basandoti sul contesto, identifica il nome ufficiale del comune italiano e fornisci le sue coordinate.
-            Restituisci ESCLUSIVAMENTE un oggetto JSON con chiavi "lat", "lng", e "correctedName".
-            Esempio per "Platì" nel contesto di un'operazione in Calabria: {"lat": 38.2208, "lng": 16.0463, "correctedName": "Platì"}.
-        `;
-    } else {
-        console.log(`Geocoding without context: "${cityName}"`);
-        prompt = `Fornisci le coordinate geografiche (latitudine e longitudine) e il nome ufficiale del comune italiano per "${cityName}". Restituisci ESCLUSIVAMENTE un oggetto JSON con chiavi "lat", "lng" e "correctedName". Esempio per Milano: {"lat": 45.4642, "lng": 9.1900, "correctedName": "Milano"}`;
-    }
+    // La forma dell'uscita la vincola lo schema: il prompt dice solo che cosa cercare.
+    const system = `Dai le coordinate del comune italiano indicato, con il suo nome ufficiale in correctedName. Il nome può essere una frazione, un nome storico o una grafia errata: in quel caso scegli il comune a cui appartiene, aiutandoti con il titolo della notizia se c'è.`;
+    const prompt = context ? `Località: ${cityName}\nTitolo della notizia: ${context}` : `Località: ${cityName}`;
+    console.log(`Geocoding "${cityName}"${context ? ' with context' : ''}`);
 
     try {
-        const response = await runPhase('geocode', { prompt, schema: geocodeSchema });
+        const response = await runPhase('geocode', { system, prompt, schema: geocodeSchema });
 
         if (!response.text) {
             console.warn(`Geocoding for "${cityName}" returned no text.`);
@@ -198,39 +188,63 @@ const jaccardSimilarity = (set1: Set<string>, set2: Set<string>): number => {
     return intersection.size / union.size;
 };
 
-const processProvenance = (cases: (Partial<CaseData> | CaseData)[], sources: SourceRef[]): (Partial<CaseData> | CaseData | null)[] => {
+// --- Fonti -------------------------------------------------------------------
+
+/** URL confrontabile: senza protocollo, www, barra finale e parametri di tracciamento. */
+const normalizzaUrl = (url: string | undefined | null): string => {
+    if (!url) return '';
+    try {
+        const u = new URL(url);
+        [...u.searchParams.keys()].filter(k => /^utm_|^fbclid$|^gclid$/i.test(k)).forEach(k => u.searchParams.delete(k));
+        const query = u.searchParams.toString();
+        return `${u.hostname.replace(/^www\./, '').toLowerCase()}${u.pathname.replace(/\/+$/, '')}${query ? `?${query}` : ''}`;
+    } catch {
+        return url.trim().toLowerCase();
+    }
+};
+
+/**
+ * Tiene solo le fonti che il modello ha davvero consultato. Con Claude il
+ * confronto e' per URL: le pagine consultate sono gli URL reali delle testate.
+ * Con Gemini le pagine arrivano come rinvii vertexaisearch, e resta il
+ * confronto tra i titoli. Nei test reali il confronto tra titoli aveva dato a un
+ * caso la pagina di Wikipedia e a un altro l'articolo di un'altra vicenda.
+ */
+export const processProvenance = (cases: (Partial<CaseData> | CaseData)[], sources: SourceRef[]): (Partial<CaseData> | CaseData | null)[] => {
     if (sources.length === 0) {
         console.warn("[Provenance] No consulted sources reported. Allowing cases to pass but quality may be affected.");
         return cases.map(c => c ? { ...c, provenanceWarning: true } : null);
     }
-    const groundingSources = sources.map(s => ({ ...s, tokens: getTokens(s.title) }));
+    const perRinvio = sources.some(s => s.uri.includes('vertexaisearch'));
+    const perUrl = new Map(sources.map(s => [normalizzaUrl(s.uri), s]));
+    const perTitolo = sources.map(s => ({ ...s, tokens: getTokens(s.title) }));
 
     return cases.map(c => {
         if (!c?.provenance || !Array.isArray(c.provenance) || c.provenance.length === 0) {
-            console.warn(`[Provenance] Case rejected due to missing provenance:`, c);
+            console.warn(`[Provenance] Case rejected due to missing provenance:`, c?.summary?.title);
             return null;
         }
         const verifiedProvenance: CaseData['provenance'] = [];
         for (const source of c.provenance) {
-            if (!source.sourceName) continue;
-            const sourceTitleTokens = getTokens(source.sourceName);
-            let bestMatch = null;
-            let highestSimilarity = 0.3;
-            for (const gs of groundingSources) {
-                const similarity = jaccardSimilarity(sourceTitleTokens, gs.tokens);
-                if (similarity > highestSimilarity) {
-                    highestSimilarity = similarity;
-                    bestMatch = gs;
+            let trovata: SourceRef | undefined;
+            if (!perRinvio) {
+                trovata = perUrl.get(normalizzaUrl(source.url));
+            } else if (source.sourceName) {
+                const tokens = getTokens(source.sourceName);
+                let migliore = 0.3;
+                for (const gs of perTitolo) {
+                    const s = jaccardSimilarity(tokens, gs.tokens);
+                    if (s > migliore) { migliore = s; trovata = gs; }
                 }
             }
-            if (bestMatch) {
+            if (trovata && !verifiedProvenance.some(p => normalizzaUrl(p.url) === normalizzaUrl(trovata!.uri))) {
                 verifiedProvenance.push({
-                    sourceType: source.sourceType,
-                    sourceName: bestMatch.title,
-                    url: bestMatch.uri,
+                    sourceType: source.sourceType === 'Secondary' || source.sourceType === 'Tertiary' ? source.sourceType : 'Primary',
+                    sourceName: source.sourceName || trovata.title,
+                    url: trovata.uri,
                 });
-            } else {
-                console.warn(`[Provenance] Could not verify source "${source.sourceName}". It will be excluded.`);
+            } else if (!trovata) {
+                console.warn(`[Provenance] Fonte non tra le pagine consultate, esclusa: ${source.url || source.sourceName}`);
             }
         }
         if (verifiedProvenance.length === 0) {
@@ -241,18 +255,66 @@ const processProvenance = (cases: (Partial<CaseData> | CaseData)[], sources: Sou
     });
 };
 
+// --- Categorie, luoghi, identificativo del caso ----------------------------
+
+const CATEGORIE = Object.values(CrimeCategory) as string[];
+
+/** Solo i nove codici: un valore fuori elenco si scarta, e senza codici resta OTHER. */
+export const categorieValide = (tipi: unknown): CrimeCategory[] => {
+    const valide = (Array.isArray(tipi) ? tipi : [])
+        .map(t => (typeof t === 'string' ? t.trim().toUpperCase() : ''))
+        .filter(t => CATEGORIE.includes(t)) as CrimeCategory[];
+    const uniche = Array.from(new Set(valide));
+    return uniche.length > 0 ? uniche : [CrimeCategory.OTHER];
+};
+
+type Localita = CaseData['summary']['location'];
+
+/** Citta' senza doppioni, geocodificate; null se nessuna ha coordinate. */
+const geolocalizza = async (location: any, titolo: string): Promise<Localita | null> => {
+    let grezze: any[] = [];
+    if (Array.isArray(location?.cities)) grezze = location.cities;
+    else if (typeof location?.city === 'string') grezze = [{ name: location.city, region: location.region || '', province: location.province || '' }];
+
+    const viste = new Set<string>();
+    const uniche = grezze
+        .map(c => (typeof c === 'string' ? { name: c, province: '', region: '' } : c))
+        .filter(c => {
+            const chiave = (c?.name ?? '').trim().toLowerCase();
+            if (!chiave || viste.has(chiave)) return false;
+            viste.add(chiave);
+            return true;
+        });
+
+    const conCoordinate = (await Promise.all(uniche.map(async c => {
+        const geo = await getCoordsForCity(c.name, titolo);
+        return geo ? { ...c, name: geo.name, coords: { lat: geo.lat, lng: geo.lng }, region: normalizeRegionName(c.region || '') } : null;
+    }))).filter((c): c is NonNullable<typeof c> => c !== null);
+
+    // Due nomi diversi possono essere lo stesso comune dopo la correzione.
+    const finali = conCoordinate.filter((c, i) => conCoordinate.findIndex(x => x.name.toLowerCase() === c.name.toLowerCase()) === i);
+    if (finali.length === 0) return null;
+    const regioni = new Set([...finali.map(c => c.region).filter(Boolean), ...((location?.regions ?? []) as string[]).map(normalizeRegionName)]);
+    return { cities: finali, regions: Array.from(regioni).filter(Boolean) };
+};
+
+/** L'ID lo assegna sempre il contatore locale: quello proposto dal modello non e' unico. */
+const nuovoCaseID = async (categorie: CrimeCategory[], manuale = false): Promise<string> => {
+    const data = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const codice = crimeCategoryShortCodes[categorie[0]] || 'OTH';
+    const progressivo = String(await incrementAndGetCaseCounter()).padStart(3, '0');
+    return `${data}-${codice}-${manuale ? 'MANUAL-' : ''}${progressivo}`;
+};
+
+// --- Profilo e casi esistenti nel messaggio --------------------------------
+
 const summarizeCasesForPrompt = (cases: CaseData[], showFeedback: boolean = false): string => {
-    if (cases.length === 0) return "Nessuno.";
+    if (cases.length === 0) return "nessuno";
     return cases.map(c => {
-        let summary = `- ${c.summary.title} (ID: ${c.caseID}, Tipi: ${c.summary.crimeTypes.join(', ')}, Luogo: ${c.summary.location.cities.length > 0 ? c.summary.location.cities[0].name : 'N/A'})`;
+        let summary = `- ${c.summary.title} (${c.summary.crimeTypes.join(', ')}, ${c.summary.location.cities[0]?.name ?? 'luogo non indicato'})`;
         if (showFeedback && c.userFeedback?.startsWith('irrelevant_')) {
-            let reason = '';
-            switch(c.userFeedback) {
-                case 'irrelevant_duplicate': reason = 'Duplicato'; break;
-                case 'irrelevant_too_old': reason = 'Troppo vecchio'; break;
-                case 'irrelevant_not_crime': reason = 'Non rilevante'; break;
-            }
-            if (reason) summary += ` [Motivo Irrilevanza: ${reason}]`;
+            const motivo = { irrelevant_duplicate: 'duplicato', irrelevant_too_old: 'troppo vecchio', irrelevant_not_crime: 'fuori perimetro' }[c.userFeedback as string];
+            if (motivo) summary += ` [motivo: ${motivo}]`;
         }
         return summary;
     }).join('\n');
@@ -267,58 +329,163 @@ const recentCasesForDedup = (cases: CaseData[]): CaseData[] => {
     return cases.filter(c => new Date(c.lastUpdateTimestamp || c.initialReportTimestamp).getTime() >= since);
 };
 
-export const defaultPrompt = `
-Sei "Chronicle", un'intelligenza artificiale analista per forze dell'ordine, specializzata in criminalità italiana. Il tuo compito è monitorare fonti giornalistiche per identificare operazioni di polizia di rilievo e trasformarle in report strutturati.
+const casiEsistenti = (cases: CaseData[]): string =>
+    JSON.stringify(recentCasesForDedup(cases).map(c => ({ title: c.summary.title, city: c.summary.location.cities[0]?.name ?? null, date: c.summary.dateOfOperation })));
 
-**OBIETTIVO:**
-Analizza il web italiano alla ricerca di notizie recenti (ultimi 3 giorni) relative a operazioni di polizia, Guardia di Finanza, e Procure. Estrai i dati e formattali in un array JSON di oggetti "CaseData", seguendo lo schema definito.
+const oggi = () => new Date().toISOString().slice(0, 10);
 
-**PARAMETRI DI RICERCA:**
-1.  **Criteri di Inclusione:**
-    *   **Crimini:** Mafia, 'ndrangheta, camorra, criminalità organizzata, riciclaggio, autoriciclaggio, corruzione, bancarotta fraudolenta, frodi fiscali strutturate (es. carosello, crediti fittizi), reati economico-finanziari di grande impatto. Includi specificamente notizie su frodi scoperte dalla Guardia di Finanza che utilizzano entità di facciata, come false ONLUS o finte Associazioni Sportive Dilettantistiche (ASD), per mascherare attività commerciali e evadere il fisco.
-    *   **Rilevanza:** Operazioni con molti indagati, importi sequestrati elevati (superiori a 1 milione di Euro), tecniche innovative o collegamenti internazionali. Concentrati su operazioni che hanno un impatto significativo, ma non escludere le frodi basate su ASD/ONLUS anche se gli importi sono inferiori, se rappresentano uno schema fraudolento degno di nota.
-    *   **Intervallo Temporale:** SOLO notizie pubblicate negli ultimi 3 giorni.
+// --- Istruzioni fisse ------------------------------------------------------
+// Prosa normale, una regola una volta sola, con il motivo quando non e'
+// ovvio. Vanno nel system: con Claude stanno in cache tra una chiamata e
+// l'altra.
 
-2.  **Regole Critiche di Estrazione (DA SEGUIRE SEMPRE):**
-    *   **DATA (CRITICO):** La data di pubblicazione dell'articolo DEVE essere negli ultimi 3 giorni. La data dell'operazione riportata DEVE essere plausibile e recente. **Rifiuta categoricamente qualsiasi notizia la cui data di pubblicazione originale sia più vecchia di 7 giorni.** Devi trovare la data di pubblicazione effettiva nel testo, non basarti su metadati come "ultimo aggiornamento". Date future sono sempre un errore e invalidano la notizia.
-    *   **PERSONE:** Estrai sempre **Nome e Cognome**, **Ruolo** (es. "imprenditore", "sindaco") e, se disponibile, la **Data di Nascita**. Se il ruolo non è specificato nel testo, lascia il valore \`null\`. **NON usare MAI la parola "sconosciuto" come ruolo se il nome della persona è noto.**
-    *   **LOCALITÀ:** Se un'operazione coinvolge più luoghi, elenca TUTTI, usando i nomi ufficiali delle regioni italiane. Metti la città principale come primo elemento nell'array \`cities\`. Includi anche le regioni nell'array \`regions\`.
-    *   **URL:** Fornisci sempre l'URL pubblico e diretto della fonte, mai URL di reindirizzamento come quelli di \`vertexaisearch.cloud.google.com\`.
+const REGOLE_COMUNI = `Lavori per Acta Diurna, un'applicazione civile di OSINT che legge la stampa italiana e struttura in casi le operazioni delle forze dell'ordine già eseguite. Lavori solo su notizie pubblicate. I casi li leggono analisti, giornalisti e ricercatori, e ogni dato viene verificato da una persona prima di essere usato: per questo un campo vuoto vale più di un valore dedotto.
 
-3.  **FILTRO ANTI-DUPLICAZIONE (CRITICO):**
-    *   Prima di creare un nuovo caso, confronta i fatti principali (luogo, tipo di reato, nomi chiave) con i casi già esistenti forniti.
-    *   Se la notizia riguarda un'operazione GIÀ PRESENTE, **NON CREARE UN NUOVO CASO**. Ignora la notizia.
+Perimetro: operazioni già eseguite in Italia da Polizia di Stato, Carabinieri o Guardia di Finanza, o disposte da una Procura: arresti, misure cautelari, perquisizioni, sequestri, confische. Restano fuori i processi, le sentenze e le indagini annunciate senza un'operazione.
 
-**PROCESSO OPERATIVO:**
-1.  Esegui una ricerca approfondita.
-2.  Per ogni notizia RILEVANTE, RECENTE e NON DUPLICATA, estrai le informazioni.
-3.  Costruisci un oggetto JSON per ogni notizia, rispettando rigorosamente lo schema.
-4.  Genera un ID univoco per ogni nuovo caso nel formato 'YYYYMMDD-[CODICE_REATO]-XXX'.
-5.  Fornisci un output finale contenente SOLO l'array JSON.
+Categorie. In summary.crimeTypes metti uno o più di questi codici, il principale per primo, e nient'altro; il reato come lo descrive l'articolo va in details.investigationReason.
+- ORGANIZED_CRIME: mafia, 'ndrangheta, camorra, associazioni per delinquere
+- FINANCIAL_CRIME: riciclaggio, autoriciclaggio, bancarotta, reati societari e finanziari
+- ASSET_SEIZURE: operazioni il cui fatto principale è un sequestro o una confisca di beni
+- FRAUD: frodi fiscali, false fatturazioni, crediti fittizi, truffe, enti di facciata come false ONLUS o ASD
+- CORRUPTION: corruzione, concussione, turbativa d'asta, appalti pilotati
+- DRUG_TRAFFICKING: traffico e spaccio di stupefacenti
+- CYBER_CRIME: reati informatici
+- EXTORTION: estorsione e usura
+- OTHER: il resto dentro il perimetro
 
-**SCHEMA JSON \`CaseData\` (DA POPOLARE OBBLIGATORIAMENTE):**
-\`\`\`json
-{
-  "caseID": "string", "initialReportTimestamp": "string", "lastUpdateTimestamp": "string", "status": "Active",
+Persone. Per ogni persona coinvolta riporta nome_completo come lo scrive l'articolo. Nome e cognome vanno separati con ordine_certo true solo quando l'articolo li distingue senza dubbio, per esempio con il cognome in maiuscolo; altrimenti lasciali null. ruolo è che cosa fa la persona (imprenditore, sindaco, funzionario); posizione è la sua situazione nel procedimento come la scrive l'articolo (indagato, arrestato, ai domiciliari, obbligo di firma). Data di nascita solo se scritta per intero, in AAAA-MM-GG; età se l'articolo la dà; codice fiscale solo se compare nel testo. Il sesso solo se l'articolo scrive «nato» o «nata» (sesso_fonte "nascita") o usa una qualifica al maschile o al femminile riferita a quella persona, come «l'indagata» (sesso_fonte "qualifica"): dal solo nome proprio non si deduce, perché nomi come Andrea valgono per entrambi.
+
+Società ed enti. ragione_sociale senza la forma giuridica, forma a parte (s.r.l., s.p.a., s.a.s.), tipo tra societa, ente_pubblico e organizzazione. Partita IVA, codice fiscale e numero REA solo se scritti nel testo. Poi sede, stato (sotto sequestro, fallita, in liquidazione), attività e settore, valore dei beni riconducibili se l'articolo lo dà, e ruolo: che cosa c'entra con l'operazione (società cartiera, beneficiaria dei fondi, appaltatrice).
+
+Legami. Quando l'articolo lega una persona a una società (amministratore, socio, titolare, dipendente, prestanome) riportalo in legami, con il ruolo come scritto, il tipo tra amministrazione, proprieta, dipendenza, rappresentanza e appartenenza, e qualifica "di fatto" per prestanome e amministratori di fatto.
+
+Le ipotesi di reato sono contestazioni dell'accusa, non fatti accertati: scrivile come tali.
+
+Luoghi: tutte le località coinvolte, la principale per prima, con provincia e regione nella forma ufficiale.
+
+Fonti. In provenance metti solo pagine che hai aperto o trovato con la ricerca, con l'URL esatto restituito dallo strumento: il codice scarta ogni fonte il cui URL non è tra le pagine consultate. Preferisci il comunicato ufficiale o l'articolo originale alle riprese: sourceType "Primary" per loro, "Secondary" per le riprese.`;
+
+const FORMA_CASO = `{
   "summary": {
-    "title": "string", "crimeTypes": ["string"], 
-    "location": { 
-        "cities": [{ "name": "string", "province": "string", "region": "string" }],
-        "regions": ["string"]
-    },
-    "dateOfOperation": "string"
+    "title": "titolo informativo del caso",
+    "crimeTypes": ["FRAUD"],
+    "location": { "cities": [{ "name": "comune", "province": "sigla o nome", "region": "regione" }], "regions": ["regione"] },
+    "dateOfOperation": "AAAA-MM-GG"
   },
-  "details": { "involvedForces": ["string"], "operationName": "string | null", "investigationReason": "string", "seizedAssetsValue": "number | null", "seizedAssetsDescription": "string | null" },
-  "entities": {
-    "individuals": [{ "name": "string", "age": "number | null", "legalAction": "string (es: 'arrestato')", "role": "string (es: 'sindaco') | null", "dateOfBirth": "string (YYYY-MM-DD) | null" }],
-    "companies": [{ "name": "string", "legalAction": "string (es: 'società cartiera')" }]
+  "details": { "involvedForces": ["Guardia di Finanza"], "operationName": null, "investigationReason": "il reato come lo descrive l'articolo", "seizedAssetsValue": null, "seizedAssetsDescription": null },
+  "entita": {
+    "persone": [{ "nome_completo": "", "nome": null, "cognome": null, "ordine_certo": false, "sesso": null, "sesso_fonte": null, "data_nascita": null, "luogo_nascita": null, "cf": null, "eta": null, "ruolo": null, "posizione": null, "fonte_url": null }],
+    "societa": [{ "ragione_sociale": "", "forma": null, "tipo": "societa", "cf": null, "piva": null, "rea": null, "sede": null, "stato": null, "attivita": null, "settore": null, "valore_beni": null, "ruolo": null, "fonte_url": null }],
+    "legami": [{ "persona": "nome completo come in persone", "societa": "ragione sociale come in societa", "ruolo": "", "tipo": null, "qualifica": null }]
   },
-  "provenance": [{ "sourceType": "Primary", "sourceName": "string", "url": "string" }],
-  "updates": [],
-  "audio": { "ttsScript": "string", "ttsScriptEn": "string" }
-}
-\`\`\`
-`;
+  "provenance": [{ "sourceType": "Primary", "sourceName": "titolo - testata", "url": "" }]
+}`;
+
+const SISTEMA_RASSEGNA = `${REGOLE_COMUNI}
+
+Compito: cercare sul web italiano le operazioni dentro il perimetro pubblicate negli ultimi 3 giorni rispetto alla data odierna indicata nel messaggio. Conta la data di pubblicazione scritta nell'articolo, non quella di aggiornamento della pagina; una notizia di più di 7 giorni resta fuori anche se ripresa oggi. Una notizia su un'operazione già presente tra i casi in archivio non diventa un nuovo caso. Nel messaggio trovi anche i criteri di interesse dell'analista e il profilo appreso dalle sue scelte: usali per decidere che cosa cercare e che cosa tenere.
+
+Risposta: dopo le ricerche, un array JSON di casi in questa forma, vuoto se non trovi nulla di nuovo, senza testo dopo l'array.
+
+${FORMA_CASO}`;
+
+const SISTEMA_ANALISI_URL = `${REGOLE_COMUNI}
+
+Compito: leggere l'articolo all'URL indicato nel messaggio e restituirne il caso. Se l'articolo non riguarda un'operazione dentro il perimetro restituisci {"error": "L'articolo non riguarda un'operazione delle forze dell'ordine."}; se è un caso già in archivio, {"error": "Questa notizia è un duplicato di un caso esistente."}.
+
+Risposta: un solo oggetto JSON in questa forma, senza testo dopo.
+
+${FORMA_CASO}`;
+
+const SISTEMA_AGGIORNAMENTO = `${REGOLE_COMUNI}
+
+Compito: aggiornare un caso esistente cercando sul web sviluppi e dati mancanti, prima di tutto persone e società non ancora estratte. Restituisci un oggetto JSON con i soli campi che cambiano, nella forma qui sotto. In entita metti le persone, le società e i legami nuovi o con dati in più: il codice li unisce a quelli già presenti per identità e non cancella nulla. In provenance metti le fonti nuove. Se trovi uno sviluppo rilevante aggiungi "updates": [{ "timestamp": "AAAA-MM-GG", "summary": "che cosa è cambiato" }]. Se non trovi nulla di nuovo, restituisci {}.
+
+${FORMA_CASO}`;
+
+/**
+ * Criteri di interesse dell'analista: la sola parte che la revisione del
+ * profilo puo' riscrivere. Regole di estrazione e forma dell'uscita stanno nel
+ * system e non si toccano.
+ */
+export const defaultPrompt = `Criteri di interesse dell'analista
+
+Cerca soprattutto criminalità organizzata (mafia, 'ndrangheta, camorra), riciclaggio e autoriciclaggio, corruzione, bancarotta fraudolenta, frodi fiscali strutturate come le frodi carosello e i crediti fittizi, reati economico-finanziari di grande impatto. Interessano in particolare le frodi scoperte dalla Guardia di Finanza che usano enti di facciata, come false ONLUS o finte associazioni sportive dilettantistiche (ASD), per mascherare attività commerciali ed evadere il fisco.
+
+Contano di più le operazioni con molti indagati, sequestri sopra il milione di euro, tecniche innovative o collegamenti internazionali. Le frodi con ASD e ONLUS interessano anche sotto quella soglia, se lo schema è degno di nota.`;
+
+/**
+ * I prompt salvati fino alla 0.3 contengono tutto, regole e forma vecchia
+ * dell'uscita compresa: se arrivassero al modello accanto al system nuovo, gli
+ * chiederebbero due forme diverse. Si riconoscono e si sostituiscono con i
+ * criteri predefiniti.
+ */
+const criteriDaUsare = (salvato: string | undefined | null): string => {
+    if (!salvato) return defaultPrompt;
+    if (/SCHEMA JSON|"entities"|CaseData|"individuals"/.test(salvato)) {
+        console.warn('[rassegna] Prompt salvato nel formato precedente alla 0.4: si usano i criteri predefiniti.');
+        return defaultPrompt;
+    }
+    return salvato;
+};
+
+// --- Costruzione dei casi --------------------------------------------------
+
+/** Da un caso proposto dal modello al caso completo, o null se non regge. */
+const costruisciCaso = async (c: any, opzioni: { manuale?: boolean; stato?: CaseData['status'] } = {}): Promise<CaseData | null> => {
+    const titolo = typeof c?.summary?.title === 'string' ? c.summary.title.trim() : '';
+    if (!titolo) {
+        console.warn('[rassegna] Caso senza titolo, scartato.');
+        return null;
+    }
+    const location = await geolocalizza(c.summary.location, titolo);
+    if (!location) {
+        console.warn(`[rassegna] "${titolo}" scartato: nessuna località con coordinate.`);
+        return null;
+    }
+    const crimeTypes = categorieValide(c.summary.crimeTypes);
+    const caseID = await nuovoCaseID(crimeTypes, opzioni.manuale);
+    const dateOfOperation = dataCompletaOggi(c.summary.dateOfOperation);
+    const adesso = new Date().toISOString();
+    const details = c.details ?? {};
+
+    return {
+        caseID,
+        initialReportTimestamp: adesso,
+        lastUpdateTimestamp: adesso,
+        status: opzioni.stato ?? 'Active',
+        summary: { title: titolo, crimeTypes, location, dateOfOperation },
+        details: {
+            involvedForces: Array.isArray(details.involvedForces) ? details.involvedForces : [],
+            operationName: details.operationName ?? null,
+            investigationReason: details.investigationReason ?? '',
+            seizedAssetsValue: typeof details.seizedAssetsValue === 'number' ? details.seizedAssetsValue : null,
+            seizedAssetsDescription: details.seizedAssetsDescription ?? null,
+        },
+        entita: await costruisciEntita(c.entita, { caseID, dataArticolo: dateOfOperation }),
+        provenance: c.provenance ?? [],
+        updates: Array.isArray(c.updates) ? c.updates : [],
+        // La sintesi vocale e' uscita dal prodotto; il campo resta per gli archivi.
+        audio: { ttsScript: titolo, ttsScriptEn: '' },
+        isImportant: false, hasReport: false, isRead: false,
+        provenanceWarning: c.provenanceWarning,
+    };
+};
+
+const dataCompletaOggi = (data: unknown): string =>
+    typeof data === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data) ? data : oggi();
+
+const leggiJson = (testo: string, contesto: string): any => {
+    try {
+        return extractJson(testo);
+    } catch (errore) {
+        console.warn(`[${contesto}] JSON non valido nella risposta:`, testo.slice(0, 2000));
+        throw new Error(`Failed to parse ${contesto} data from AI model: ${(errore as Error).message}`);
+    }
+};
+
+// --- Fasi ------------------------------------------------------------------
 
 export const generateCaseData = async (
     existingCases: CaseData[],
@@ -329,231 +496,79 @@ export const generateCaseData = async (
     irrelevantExamples: CaseData[]
 ): Promise<CaseData[]> => {
   try {
-    const activePromptEntry = await getActivePrompt();
-    let promptToUse = activePromptEntry ? activePromptEntry.prompt : defaultPrompt;
+    const criteri = criteriDaUsare((await getActivePrompt())?.prompt);
+    const prompt = `Data odierna: ${oggi()}.
 
-    // Senza la data di oggi il modello non sa che cosa significhi "ultimi 3
-    // giorni" e giudica la recenza sulla propria data di addestramento.
-    const profileSection = `
-**DATA ODIERNA:** ${new Date().toISOString().slice(0, 10)}
+${criteri}
 
-**PROFILO DI RILEVANZA (Appreso dal feedback dell'analista):**
-*   **MASSIMA PRIORITÀ (Segnalato dall'analista - Peso 4):**
+Profilo appreso dalle scelte dell'analista, dal più al meno importante:
+- segnalati dall'analista:
 ${summarizeCasesForPrompt(analystReportedExamples)}
-*   **Esempi di casi ad ALTA PRIORITÀ (dai massima priorità a notizie simili - Peso 3):**
+- marcati come importanti:
 ${summarizeCasesForPrompt(highPriorityExamples)}
-*   **Esempi di casi a MEDIA PRIORITÀ (casi di forte interesse - Peso 2):**
+- con report di approfondimento:
 ${summarizeCasesForPrompt(mediumPriorityExamples)}
-*   **Esempi di casi STANDARD (linea di base dell'interesse - Peso 1):**
+- letti:
 ${summarizeCasesForPrompt(standardExamples)}
-*   **Esempi di casi IRRILEVANTI (evita notizie simili, presta attenzione al motivo):**
+- archiviati come irrilevanti, da evitare:
 ${summarizeCasesForPrompt(irrelevantExamples, true)}
 
-**CASI ESISTENTI (da usare per il filtro anti-duplicazione):**
-${JSON.stringify(recentCasesForDedup(existingCases).map(c => ({ title: c.summary.title, city: c.summary.location.cities[0]?.name ?? null, date: c.summary.dateOfOperation })))}
-`;
-    
-    promptToUse += profileSection;
+Casi già in archivio negli ultimi ${DEDUP_WINDOW_DAYS} giorni, da non ripetere: ${casiEsistenti(existingCases)}`;
 
-    const response = await runPhase('search', { prompt: promptToUse, webSearch: true });
-
+    const response = await runPhase('search', { system: SISTEMA_RASSEGNA, prompt, webSearch: true });
     if (!response.text) {
         throw new Error("The AI model returned an empty response during case generation.");
     }
 
-    let parsedResponse: any;
-    try {
-        parsedResponse = extractJson(response.text);
-    } catch (parseError) {
-        console.warn('[rassegna] JSON non valido nella risposta:', response.text.slice(0, 2000));
-        throw new Error(`Failed to parse intelligence data from AI model: ${(parseError as Error).message}`);
-    }
-    if (parsedResponse === undefined) {
+    const parsed = leggiJson(response.text, 'rassegna');
+    if (parsed === undefined) {
         // Nessun JSON: e' lecito che il modello non trovi nulla.
         console.log('[rassegna] nessun JSON nella risposta:', response.text.slice(0, 500));
         return [];
     }
-    console.log(`[rassegna] ${Array.isArray(parsedResponse) ? parsedResponse.length : '?'} casi proposti, ${response.sources.length} pagine consultate`);
-        let rawCases: any[] = Array.isArray(parsedResponse) ? parsedResponse : parsedResponse.cases;
-        if (!Array.isArray(rawCases)) {
-            throw new Error("Failed to parse intelligence data from AI model: unexpected format.");
-        }
-        
-        const verifiedCasesWithNulls = processProvenance(rawCases, response.sources);
-        const newCases = verifiedCasesWithNulls.filter((c): c is Partial<CaseData> => c !== null);
-
-        const processedCasesPromises = newCases
-          .filter(c => c.summary && c.summary.title)
-          .map(async (c: any): Promise<Partial<CaseData> | null> => {
-            const locationData: any = c.summary?.location;
-            let rawCities: any[] = [];
-        
-            if (locationData?.cities && Array.isArray(locationData.cities)) {
-              rawCities = locationData.cities;
-            } else if (locationData?.city && typeof locationData.city === 'string') {
-              rawCities = [{ name: locationData.city, region: locationData.region || '', province: locationData.province || '' }];
-            }
-        
-            const citiesWithCoordsPromises = rawCities.map(async (city: any) => {
-                const cityName = typeof city === 'string' ? city : city?.name;
-                if (!cityName) return null;
-                const geoResult = await getCoordsForCity(cityName, c.summary.title);
-                if (!geoResult) return null;
-                
-                const baseCityObject = typeof city === 'string' ? { name: cityName, province: '', region: '' } : city;
-                return {
-                  ...baseCityObject,
-                  name: geoResult.name, // Use the corrected name
-                  coords: { lat: geoResult.lat, lng: geoResult.lng },
-                  region: normalizeRegionName(baseCityObject.region || ''),
-                };
-            });
-
-            const citiesWithCoords = (await Promise.all(citiesWithCoordsPromises))
-              .filter((city): city is NonNullable<typeof city> => city !== null);
-        
-            if (citiesWithCoords.length === 0) {
-              console.warn(`Case "${c.summary.title}" skipped: no valid coordinates found.`);
-              return null;
-            }
-            
-            const cityRegions = new Set(citiesWithCoords.map(city => city.region).filter(Boolean));
-            const providedRegions = new Set((locationData?.regions || []).map(normalizeRegionName));
-            const locationWithCoords = {
-              cities: citiesWithCoords,
-              regions: Array.from(new Set([...cityRegions, ...providedRegions])),
-            };
-        
-            const crimeCode = (c.summary.crimeTypes && c.summary.crimeTypes.length > 0) ? crimeCategoryShortCodes[c.summary.crimeTypes[0] as CrimeCategory] || 'OTH' : 'OTH';
-            const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-            const counter = await incrementAndGetCaseCounter();
-            const progressiveId = String(counter).padStart(3, '0');
-        
-            return {
-              ...c,
-              // L'ID lo assegna sempre il contatore locale: quello proposto dal
-              // modello non e' unico tra una rassegna e l'altra.
-              caseID: `${dateStr}-${crimeCode}-${progressiveId}`,
-              initialReportTimestamp: c.initialReportTimestamp || new Date().toISOString(),
-              lastUpdateTimestamp: c.lastUpdateTimestamp || new Date().toISOString(),
-              status: c.status || 'Active',
-              summary: { ...c.summary, location: locationWithCoords, dateOfOperation: c.summary.dateOfOperation || new Date().toISOString().split('T')[0] },
-              details: c.details || {},
-              entities: c.entities || { individuals: [], companies: [] },
-              provenance: c.provenance || [],
-              updates: c.updates || [],
-              audio: c.audio || { ttsScript: c.summary.title, ttsScriptEn: 'Summary not available.' },
-              isImportant: false, hasReport: false, isRead: false,
-            };
-          });
-          
-        const resolvedCases = await Promise.all(processedCasesPromises);
-        return resolvedCases.filter((c): c is CaseData => c !== null);
-
-    } catch (e: any) {
-        if (e.message?.includes("Failed to parse")) {
-            console.error("Failed to parse Gemini response:", e);
-            throw new Error("Failed to parse intelligence data from AI model.");
-        }
-        handleApiError(e, 'case generation');
+    const rawCases: any[] = Array.isArray(parsed) ? parsed : parsed?.cases;
+    if (!Array.isArray(rawCases)) {
+        throw new Error("Failed to parse intelligence data from AI model: unexpected format.");
     }
+    console.log(`[rassegna] ${rawCases.length} casi proposti, ${response.sources.length} pagine consultate`);
+
+    const verificati = processProvenance(rawCases, response.sources).filter(c => c !== null);
+    const casi = await Promise.all(verificati.map(c => costruisciCaso(c)));
+    return casi.filter((c): c is CaseData => c !== null);
+  } catch (e: any) {
+    if (e.message?.includes("Failed to parse")) {
+        console.error("Failed to parse AI response:", e);
+        throw new Error("Failed to parse intelligence data from AI model.");
+    }
+    handleApiError(e, 'case generation');
+  }
 };
 
-export const analyzeSingleUrl = async (url: string, existingCases: CaseData[]): Promise<Partial<CaseData>> => {
+/** Caso completo da un URL segnalato dall'analista; l'ID e' di tipo MANUAL. */
+export const analyzeSingleUrl = async (url: string, existingCases: CaseData[]): Promise<CaseData> => {
   try {
-    const prompt = `
-        Sei un analista di intelligence. Il tuo compito è analizzare il contenuto di un singolo URL fornito e estrarre le informazioni in un oggetto JSON strutturato.
+    const prompt = `URL da analizzare: ${url}
 
-        **URL DA ANALIZZARE:** ${url}
+Casi già in archivio negli ultimi ${DEDUP_WINDOW_DAYS} giorni: ${casiEsistenti(existingCases)}`;
 
-        **ISTRUZIONI:**
-        1.  Accedi al contenuto dell'URL.
-        2.  Leggi l'articolo e identifica se si tratta di una notizia relativa a un'operazione di polizia in Italia.
-        3.  Se la notizia è pertinente, estrai TUTTE le informazioni disponibili e formattale in un singolo oggetto JSON che segua lo schema \`CaseData\`.
-        4.  **REGOLE CRITICHE:** Segui le stesse regole di estrazione del tuo compito principale (date non future, nomi/ruoli/date di nascita completi, località multiple, URL diretti). Se il ruolo non è specificato, lascia il valore \`null\` e NON usare la parola "sconosciuto". Usa nomi di regione ufficiali.
-        5.  **CONTROLLO DUPLICATI:** Confronta la notizia con l'elenco di casi esistenti fornito. Se è un duplicato evidente, restituisci un oggetto JSON di errore: \`{"error": "Questa notizia è un duplicato di un caso esistente."}\`.
-        6.  Se l'URL non è valido o la notizia non è pertinente, restituisci un oggetto JSON di errore: \`{"error": "L'URL non contiene una notizia di intelligence rilevante."}\`.
-        7.  Il tuo output deve essere ESCLUSIVAMENTE l'oggetto JSON, senza markdown o altri commenti.
-
-        **CASI ESISTENTI PER CONTROLLO DUPLICATI:**
-        ${JSON.stringify(recentCasesForDedup(existingCases).map(c => ({ title: c.summary.title, date: c.summary.dateOfOperation })))}
-        
-        **SCHEMA JSON DI OUTPUT (parziale, compila più campi possibili):**
-        \`\`\`json
-        {
-          "summary": {
-            "title": "string", "crimeTypes": ["string"], 
-            "location": { "cities": [{ "name": "string", "province": "string", "region": "string" }], "regions": ["string"] },
-            "dateOfOperation": "string"
-          },
-          "details": { "involvedForces": ["string"], "operationName": "string | null", "investigationReason": "string", "seizedAssetsValue": "number | null", "seizedAssetsDescription": "string | null" },
-          "entities": {
-            "individuals": [{ "name": "string", "age": "number | null", "legalAction": "string", "role": "string | null", "dateOfBirth": "string | null" }],
-            "companies": [{ "name": "string", "legalAction": "string" }]
-          },
-          "provenance": [{ "sourceType": "Primary", "sourceName": "string", "url": "string" }],
-          "audio": { "ttsScript": "string", "ttsScriptEn": "string" }
-        }
-        \`\`\`
-    `;
-
-    const response = await runPhase('analyzeUrl', { prompt, webSearch: true });
-
+    const response = await runPhase('analyzeUrl', { system: SISTEMA_ANALISI_URL, prompt, webSearch: true });
     if (!response.text) {
         throw new Error("L'analisi dell'URL non ha prodotto alcun risultato.");
     }
-
-    const result: any = extractJson(response.text) ?? {};
+    const result = leggiJson(response.text, 'analisi URL') ?? {};
     if (result.error) {
-        throw new Error(result.error);
-    }
-    
-    const [fixedResult] = processProvenance([result], response.sources);
-    if (!fixedResult) {
-        throw new Error("L'analisi dell'URL non ha prodotto un caso con una fonte di origine verificabile.");
+        throw new LlmError(result.error);
     }
 
-    if (fixedResult.summary?.location) {
-        const locationData: any = fixedResult.summary.location;
-        let rawCities: any[] = [];
-
-        if (locationData.cities && Array.isArray(locationData.cities)) {
-            rawCities = locationData.cities;
-        } else if (locationData.city && typeof locationData.city === 'string') {
-             rawCities = [{ name: locationData.city, region: locationData.region || '', province: locationData.province || '' }];
-        }
-
-        const citiesWithCoordsPromises = rawCities.map(async (city: any) => {
-             const cityName = (typeof city === 'string') ? city : city?.name;
-             if (!cityName) return null;
-
-             const geoResult = await getCoordsForCity(cityName, fixedResult.summary?.title);
-             if (!geoResult) return null;
-
-             const baseCityObject = (typeof city === 'string') ? { name: cityName, province: '', region: '' } : city;
-             return {
-                 ...baseCityObject,
-                 name: geoResult.name,
-                 coords: { lat: geoResult.lat, lng: geoResult.lng },
-                 region: normalizeRegionName(baseCityObject.region || '')
-             };
-        });
-        const citiesWithCoords = (await Promise.all(citiesWithCoordsPromises))
-          .filter((city): city is NonNullable<typeof city> => city !== null);
-
-        if (citiesWithCoords.length === 0) {
-             throw new Error("Analisi fallita: nessuna località valida con coordinate trovata nell'articolo.");
-        }
-
-        const cityRegions = new Set(citiesWithCoords.map(c => c.region).filter(Boolean));
-        const providedRegions = new Set((locationData.regions || []).map(normalizeRegionName));
-
-        fixedResult.summary.location = {
-            cities: citiesWithCoords,
-            regions: Array.from(new Set([...cityRegions, ...providedRegions]))
-        };
+    const [verificato] = processProvenance([result], response.sources);
+    if (!verificato) {
+        throw new LlmError("L'analisi dell'URL non ha prodotto un caso con una fonte di origine verificabile.");
     }
-    return fixedResult as Partial<CaseData>;
+    const caso = await costruisciCaso(verificato, { manuale: true, stato: 'Updated' });
+    if (!caso) {
+        throw new LlmError("Analisi fallita: nessuna località valida con coordinate trovata nell'articolo.");
+    }
+    return { ...caso, sourceMethod: 'AnalystReported', isRead: true };
   } catch (e: any) {
     if (e.message?.includes("parse")) {
         throw new Error("Formato di risposta non valido dall'analisi dell'URL.");
@@ -562,101 +577,56 @@ export const analyzeSingleUrl = async (url: string, existingCases: CaseData[]): 
   }
 };
 
+/** Campi compatti del caso da mandare al modello: niente report, niente coordinate. */
+const casoPerIlModello = (c: CaseData) => ({
+    summary: { title: c.summary.title, crimeTypes: c.summary.crimeTypes, cities: c.summary.location.cities.map(x => x.name), dateOfOperation: c.summary.dateOfOperation },
+    details: c.details,
+    persone: entitaDelCaso(c).persone.map(p => p.nome_come_scritto),
+    societa: entitaDelCaso(c).societa.map(s => [s.ragione_sociale, s.forma].filter(Boolean).join(' ')),
+    provenance: c.provenance.map(p => p.url),
+});
 
+/**
+ * Aggiornamento di un caso. Restituisce i campi cambiati; entita' e fonti
+ * tornano gia' unite a quelle esistenti, cosi' chi le salva puo' sostituirle.
+ */
 export const updateCaseDetails = async (caseData: CaseData): Promise<Partial<CaseData>> => {
   try {
-    const prompt = `
-        Sei un analista di intelligence. Ti fornisco i dati di un caso esistente che potrebbe essere incompleto.
-        Il tuo compito è eseguire una ricerca web per AGGIORNARE e COMPLETARE questo caso.
+    const prompt = `Data odierna: ${oggi()}.
 
-        **OBIETTIVO PRIMARIO: COMPLETEZZA DELLE ENTITÀ**
-        La tua priorità massima è assicurarti che OGNI persona e azienda menzionata nelle fonti sia stata estratta. Rianalizza le fonti esistenti e cercane di nuove per trovare:
-        - **TUTTE le persone indagate o arrestate:** Estrai nome completo, ruolo (es: 'imprenditore', se non specificato usa 'null', NON usare 'sconosciuto'), e data di nascita se disponibile.
-        - **TUTTE le aziende coinvolte.**
-        - **Dettagli aggiuntivi:** Nuove località (con nomi di regione ufficiali), aggiornamenti sul valore dei beni sequestrati, sviluppi investigativi, e nuove fonti giornalistiche.
+Caso da aggiornare: ${JSON.stringify(casoPerIlModello(caseData))}`;
 
-        **DATI DEL CASO ESISTENTE (da completare e aggiornare):**
-        ${JSON.stringify(caseData, null, 2)}
-
-        **ISTRUZIONI DI OUTPUT:**
-        1.  Analizza le informazioni nuove e quelle precedentemente omesse.
-        2.  Prepara un oggetto JSON contenente SOLO i campi aggiornati.
-        3.  **Regola URL (CRITICA):** Usa sempre URL diretti e pubblici per le fonti, MAI URL di reindirizzamento come \`vertexaisearch.cloud.google.com\`.
-        4.  **IMPORTANTE per gli array (\`entities\`, \`provenance\`, \`location.cities\`, ecc.):** L'array che restituisci deve essere la versione FINALE e COMPLETA. Deve contenere TUTTI gli elementi (quelli vecchi, quelli nuovi, e quelli mancanti), uniti senza duplicati.
-        5.  Se trovi uno sviluppo significativo, aggiungi un oggetto all'array "updates" con un timestamp e un riepilogo.
-        6.  Se non trovi assolutamente nessuna informazione nuova o mancante, restituisci un oggetto JSON vuoto: \`{}\`.
-        7.  L'output DEVE essere solo l'oggetto JSON, senza commenti o markdown.
-
-        Esempio di output JSON valido:
-        \`\`\`json
-        {
-          "entities": { "individuals": [/* lista COMPLETA e aggiornata */], "companies": [/* lista COMPLETA e aggiornata */] },
-          "details": { "seizedAssetsValue": 5000000 },
-          "provenance": [ /* lista COMPLETA e aggiornata */ ]
-        }
-        \`\`\`
-    `;
-
-    const response = await runPhase('updateCase', { prompt, webSearch: true });
-
-    if (!response.text) {
-        console.warn(`Update check for ${caseData.caseID} returned no new information.`);
-        return {};
-    }
-    
-    const parsedChanges: any = extractJson(response.text);
-    if (!parsedChanges || Object.keys(parsedChanges).length === 0) {
+    const response = await runPhase('updateCase', { system: SISTEMA_AGGIORNAMENTO, prompt, webSearch: true });
+    const parsed: any = response.text ? leggiJson(response.text, 'aggiornamento') : undefined;
+    if (!parsed || Object.keys(parsed).length === 0) {
         console.log(`No new updates found for case ${caseData.caseID}.`);
         return {};
     }
-    const [fixedChanges] = processProvenance([parsedChanges], response.sources);
 
-    if (!fixedChanges) {
-        console.warn(`Update for case ${caseData.caseID} discarded because provenance could not be verified.`);
-        return {};
+    const changes: Partial<CaseData> = {};
+    if (Array.isArray(parsed.provenance) && parsed.provenance.length > 0) {
+        const [verificato] = processProvenance([{ provenance: parsed.provenance }], response.sources);
+        const nuove = (verificato?.provenance ?? []).filter(p => !caseData.provenance.some(v => normalizzaUrl(v.url) === normalizzaUrl(p.url)));
+        if (nuove.length > 0) changes.provenance = [...caseData.provenance, ...nuove];
     }
-
-    if (fixedChanges.summary?.location) {
-        const newLocationData = fixedChanges.summary.location;
-        const oldLocationData = caseData.summary.location;
-    
-        if ((!newLocationData.cities || newLocationData.cities.length === 0) && oldLocationData.cities.length > 0) {
-            fixedChanges.summary.location = oldLocationData;
-        } else {
-            const citiesWithCoordsPromises = (newLocationData.cities || [])
-                .map(async (city: any) => {
-                    const cityName = typeof city === 'string' ? city : city?.name;
-                    if (!cityName) return null;
-            
-                    const geoResult = await getCoordsForCity(cityName, fixedChanges.summary?.title);
-                    if (!geoResult) return null;
-            
-                    const baseCityObject = typeof city === 'string' ? { name: cityName, province: '', region: '' } : city;
-                    return {
-                      ...baseCityObject,
-                      name: geoResult.name,
-                      coords: { lat: geoResult.lat, lng: geoResult.lng },
-                      region: normalizeRegionName(baseCityObject.region || ''),
-                    };
-                });
-            
-            const citiesWithCoords = (await Promise.all(citiesWithCoordsPromises))
-              .filter((city): city is NonNullable<typeof city> => city !== null);
-
-            if (citiesWithCoords.length === 0 && oldLocationData.cities.length > 0) {
-                fixedChanges.summary.location = oldLocationData;
-            } else {
-                const cityRegions = new Set(citiesWithCoords.map(c => c.region).filter(Boolean));
-                const providedRegions = new Set((newLocationData.regions || []).map(normalizeRegionName));
-                
-                fixedChanges.summary.location = {
-                    cities: citiesWithCoords,
-                    regions: Array.from(new Set([...cityRegions, ...providedRegions]))
-                };
-            }
+    if (parsed.entita) {
+        const nuove = await costruisciEntita(parsed.entita, { caseID: caseData.caseID, dataArticolo: caseData.summary.dateOfOperation });
+        changes.entita = unisciEntita(entitaDelCaso(caseData), nuove);
+    }
+    if (parsed.summary) {
+        const summary: any = { ...parsed.summary };
+        if (summary.location) {
+            const location = await geolocalizza(summary.location, caseData.summary.title);
+            summary.location = location ?? caseData.summary.location;
         }
+        if (summary.crimeTypes) summary.crimeTypes = categorieValide(summary.crimeTypes);
+        changes.summary = summary;
     }
-    return fixedChanges as Partial<CaseData>;
+    if (parsed.details) changes.details = parsed.details;
+    if (Array.isArray(parsed.updates) && parsed.updates.length > 0) {
+        changes.updates = [...caseData.updates, ...parsed.updates];
+    }
+    return changes;
   } catch (e: any) {
      if (e.message?.includes("parse")) {
         throw new Error(`Failed to parse update data from AI model for case ${caseData.caseID}.`);
@@ -665,22 +635,11 @@ export const updateCaseDetails = async (caseData: CaseData): Promise<Partial<Cas
   }
 };
 
-const deepDiveReportPrompt = `
-Sei un analista di intelligence senior specializzato in cronaca giudiziaria e attività delle forze dell'ordine in Italia. Il tuo compito è scrivere un report di approfondimento sul caso fornito, secondo le regole di scrittura analitica descritte qui sotto. I dati di partenza sono un punto di partenza e possono essere incompleti.
+const SISTEMA_REPORT = `Sei un analista di intelligence senior specializzato in cronaca giudiziaria e attività delle forze dell'ordine in Italia, e scrivi per Acta Diurna, un'applicazione civile che lavora solo su fonti aperte. Il tuo compito è scrivere un report di approfondimento sul caso nel messaggio. I dati del caso sono un punto di partenza e possono essere incompleti: cerca sul web le fonti originali (comunicato stampa, provvedimento, articolo) e quelle nuove, e risali sempre all'origine di ogni informazione.
 
-**OBIETTIVO:**
-Rispondi a una domanda precisa: che cosa è accaduto in questo caso, chi è coinvolto e che cosa significa. Il report è il prodotto: chi lo legge deve poter agire leggendo soltanto la prima sezione. Allo stesso tempo, estrai e struttura un elenco **aggiornato e completo** di tutte le persone e aziende coinvolte.
+Il report risponde a una domanda: che cosa è accaduto in questo caso, chi è coinvolto e che cosa significa. Chi lo legge deve poter agire leggendo soltanto la prima sezione. Scrivi la sintesi per ultima, dopo i fatti e i giudizi.
 
-**PROCESSO:**
-1.  Analizza i dati del caso fornito, considerandoli un punto di partenza.
-2.  Esegui una ricerca web approfondita per trovare dettagli aggiuntivi o mancanti nelle fonti originali e in nuove fonti. Risali sempre all'origine di ogni informazione: comunicato stampa, provvedimento, articolo.
-3.  Sintetizza TUTTE le informazioni (quelle iniziali e quelle nuove) nel campo \`reportContent\`, formattando il testo esclusivamente in **Markdown**.
-4.  Nell'allegato sulle entità, includi un elenco chiaro e **COMPLETO** di tutte le persone coinvolte (con nome, ruolo, data di nascita se disponibile) e di tutte le aziende.
-5.  Estrai **TUTTE** le persone e le aziende menzionate da **TUTTE** le fonti (vecchie e nuove), e formattale nell'oggetto \`updatedEntities\`. Se il ruolo non è specificato, lascia il valore \`null\` e **NON usare "sconosciuto"**.
-6.  Scrivi la sintesi per ultima: prima i fatti e i giudizi, poi la sintesi che li copre tutti.
-
-**LINGUAGGIO DELLA PROBABILITÀ (OBBLIGATORIO):**
-Per esprimere quanto è probabile un evento o una circostanza usa SOLO questi sette termini, tratti dalla prima riga della scala di probabilità della direttiva ICD 203, sempre nella stessa forma. Alla prima occorrenza di ciascun termine indica l'intervallo tra parentesi.
+Linguaggio della probabilità. Per dire quanto è probabile un evento usa solo questi sette termini, tratti dalla prima riga della scala della direttiva ICD 203, sempre nella stessa forma, con l'intervallo tra parentesi alla prima occorrenza di ciascuno:
 | Termine | Intervallo |
 |---|---|
 | quasi nessuna possibilità | 01-05% |
@@ -690,128 +649,126 @@ Per esprimere quanto è probabile un evento o una circostanza usa SOLO questi se
 | probabile | 55-80% |
 | molto probabile | 80-95% |
 | quasi certo | 95-99% |
-- Non usare sinonimi o altre scale ('remoto', 'altamente probabile', 'verosimile', 'plausibile', 'possibile', 'praticamente certo').
-- La **fiducia** (\`fiducia alta\`, \`fiducia moderata\`, \`fiducia bassa\`) dice quanto è solida la base del giudizio: numero, qualità e indipendenza delle fonti, solidità del ragionamento. Va dichiarata in una frase separata, **mai nella stessa frase di un termine di probabilità**. Spiega che cosa la determina (fonte unica, informazioni datate, lacuna, assunzione chiave).
-- I **fatti** si scrivono senza qualificatori, con il riferimento alla fonte. La certezza appartiene ai fatti osservati, non è un grado di probabilità.
-- **Vietati** fuori dalla scala: 'potrebbe', 'sembrerebbe', 'si ritiene', 'pare', 'forse', 'non è escluso', 'resta da vedere', 'fonti riferiscono'. 'Potrebbe' e 'può' sono ammessi solo con una condizione esplicita ('il gruppo può spostare l'attività su un'altra provincia se...'). Non usare il condizionale giornalistico ('avrebbe ricevuto'): attribuisci l'affermazione a chi la fa ('secondo la Procura di Milano, X ha ricevuto...').
-- **Presunzione di innocenza:** le ipotesi di reato sono contestazioni dell'accusa, non fatti accertati. Il fatto è che l'accusa le contesta ('la Procura contesta a X il reato di...'); usa 'indagato', 'imputato', 'arrestato', 'condannato' secondo la fase effettiva del procedimento.
+Niente sinonimi né altre scale ('remoto', 'altamente probabile', 'verosimile', 'plausibile', 'possibile', 'praticamente certo'). La fiducia (fiducia alta, moderata, bassa) dice quanto è solida la base del giudizio: numero, qualità e indipendenza delle fonti, solidità del ragionamento. Va in una frase separata da quella del termine di probabilità, con ciò che la determina (fonte unica, informazioni datate, lacuna, assunzione chiave). I fatti si scrivono senza qualificatori, con il riferimento alla fonte. Fuori dalla scala non si usano 'potrebbe', 'sembrerebbe', 'si ritiene', 'pare', 'forse', 'non è escluso', 'resta da vedere', 'fonti riferiscono'; 'può' e 'potrebbe' solo con una condizione esplicita ('il gruppo può spostare l'attività su un'altra provincia se...'). Al posto del condizionale giornalistico ('avrebbe ricevuto') attribuisci l'affermazione a chi la fa ('secondo la Procura di Milano, X ha ricevuto...'). Le ipotesi di reato sono contestazioni dell'accusa ('la Procura contesta a X il reato di...'); usa indagato, imputato, arrestato, condannato secondo la fase effettiva del procedimento.
 
-**VALUTAZIONE DELLE FONTI (sistema 4x4 UNODC):**
-Ogni fonte riceve due voti separati: affidabilità della fonte (A, B, C, X) e validità dell'informazione (1, 2, 3, 4), scritti insieme come codice (es. \`A1\`, \`B2\`, \`X4\`). La fonte non è il sito che ospita il testo, ma chi ha prodotto l'informazione.
-- **Fonte A**: ente che produce l'informazione per funzione istituzionale. Comunicato ufficiale di Questura, Carabinieri, Guardia di Finanza, Polizia di Stato, Procura; provvedimento giudiziario (ordinanza, decreto, sentenza) pubblicato o citato testualmente.
-  - Informazione **1**: il contenuto dell'atto, o un dato che l'ente attesta in prima persona (arresti eseguiti, beni sequestrati, data e luogo dell'operazione).
-  - Informazione **2**: la ricostruzione dell'accusa contenuta nel comunicato (ruoli, schema, ipotesi di reato): l'ente la conosce direttamente, ma non è ancora verificata in giudizio.
-- **Fonte B**: testata giornalistica registrata, con firma o redazione identificabile e una storia di affidabilità, che riprende un comunicato o un atto.
-  - Informazione **2**: il giornalista ha visto l'atto, cita testualmente o era presente.
-  - Informazione **3**: l'informazione è di seconda mano ma corroborata da un'altra fonte indipendente (es. il comunicato ufficiale).
-- **Fonte C**: testata o sito con una storia nota di inesattezze.
-- **Fonte X**: testata sconosciuta, aggregatore senza firma, blog, profilo social anonimo, voce non attribuita ('secondo indiscrezioni', 'fonti investigative' senza nome). Una voce non attribuita e non corroborata è \`X4\`; se corroborata da una fonte indipendente diventa \`X3\`.
-- Le dichiarazioni di indagati, difensori o vittime sono la versione di quella parte: valutale come ciò che la parte afferma, non come un fatto sul caso.
-- **La corroborazione deve essere indipendente:** dieci articoli che riprendono lo stesso comunicato sono una sola fonte. Indica sempre l'origine comune.
-- Un'informazione è **confermata** solo con voto A1, A2, B1 o B2; con ogni altro voto è **non confermata** e va detto.
-- I risultati di ricerca e le sintesi generate da IA non sono fonti: cita l'articolo o l'atto a cui rimandano.
+Valutazione delle fonti con il sistema 4x4 dell'UNODC. Ogni fonte riceve due voti, affidabilità della fonte (A, B, C, X) e validità dell'informazione (1, 2, 3, 4), scritti insieme (A1, B2, X4). La fonte è chi ha prodotto l'informazione, non il sito che la ospita.
+- Fonte A: ente che produce l'informazione per funzione istituzionale, cioè comunicato di Questura, Carabinieri, Guardia di Finanza, Polizia di Stato o Procura, oppure provvedimento giudiziario pubblicato o citato testualmente. Informazione 1: il contenuto dell'atto o un dato che l'ente attesta in prima persona (arresti eseguiti, beni sequestrati, data e luogo). Informazione 2: la ricostruzione dell'accusa nel comunicato (ruoli, schema, ipotesi di reato), nota all'ente ma non ancora verificata in giudizio.
+- Fonte B: testata registrata, con firma o redazione identificabile e una storia di affidabilità, che riprende un comunicato o un atto. Informazione 2: il giornalista ha visto l'atto, lo cita testualmente o era presente. Informazione 3: di seconda mano, ma corroborata da una fonte indipendente.
+- Fonte C: testata o sito con una storia nota di inesattezze.
+- Fonte X: testata sconosciuta, aggregatore senza firma, blog, profilo social anonimo, voce non attribuita. Non corroborata è X4; corroborata da una fonte indipendente, X3.
+Le dichiarazioni di indagati, difensori o vittime sono la versione di quella parte. La corroborazione vale solo se indipendente: dieci articoli che riprendono lo stesso comunicato sono una fonte sola, e l'origine comune va detta. Un'informazione è confermata solo con A1, A2, B1 o B2; con ogni altro voto è non confermata, e va scritto. I risultati di ricerca e le sintesi generate da IA non sono fonti: si cita l'articolo o l'atto a cui rimandano.
 
-**REGOLE DI SCRITTURA:**
-- La prima frase di ogni paragrafo riassume l'intero paragrafo; le frasi successive la sostengono, dalla più importante alla meno importante.
-- Non aprire mai con una data o con la storia del caso: apri con ciò che il lettore deve sapere.
-- Una frase, un'affermazione; circa venti parole, mai oltre trentacinque. Forma attiva, con chi agisce come soggetto.
-- Concretezza: niente 'vari', 'diversi', 'numerosi', 'ecc.'. Se non hai il dettaglio, togli l'espressione.
-- Scrivi del caso, non delle fonti ('l'articolo fornisce dettagli' non dice nulla: scrivi quali sono i dettagli).
-- Usa sempre la stessa grafia per ogni nome di persona, società e luogo.
-- Date senza ambiguità: \`14 settembre 2026\`.
+Scrittura. La prima frase di ogni paragrafo lo riassume, le altre lo sostengono dalla più importante. Non si apre con una data o con la storia del caso, ma con ciò che il lettore deve sapere. Una frase, un'affermazione: circa venti parole, mai oltre trentacinque, in forma attiva con chi agisce come soggetto. Niente 'vari', 'diversi', 'numerosi', 'ecc.': senza il dettaglio, l'espressione si toglie. Si scrive del caso, non delle fonti. Ogni nome di persona, società e luogo ha sempre la stessa grafia. Date senza ambiguità: 14 settembre 2026.
 
-**REGOLE CRITICHE DI STRUTTURA DEL REPORT:**
-- Il \`reportContent\` DEVE seguire esattamente questa struttura di sezioni Markdown, nell'ordine indicato. Usa solo titoli di livello \`###\`; all'interno delle sezioni usa paragrafi, elenchi, grassetto e tabelle, ma non altri titoli.
-  1.  \`### 1. Sintesi (bottom line)\`: risponde alla domanda in 3-5 frasi: che cosa è accaduto, che cosa significa, quanto sei sicuro (con un termine della scala o un livello di fiducia, mai entrambi nella stessa frase). Basta da sola per agire.
-  2.  \`### 2. Giudizi chiave\`: elenco numerato. Ogni giudizio è una frase con un termine della scala di probabilità e i riferimenti alle fonti su cui poggia (es. \`(F1, F3)\`), seguita da una frase separata con il livello di fiducia e il motivo. Esempio: '1. È probabile (55-80%) che il gruppo operasse anche in Campania, perché due ordinanze citano depositi a Caserta (F1, F2). Fiducia moderata: entrambe le ordinanze derivano dalla stessa indagine.'
-  3.  \`### 3. Fatti accertati\`: elenco numerato dei fatti, senza qualificatori, ciascuno con riferimento e voto 4x4 della fonte (es. \`(F1, A1)\`). Solo fatti: nessun giudizio, nessun livello di fiducia. Le contestazioni dell'accusa sono riportate come tali.
-  4.  \`### 4. Analisi\`: come i fatti sostengono i giudizi. Usa queste etichette in grassetto, nell'ordine: **Modus operandi** (lo schema criminale descritto dall'accusa, i ruoli, i flussi di denaro o di merce), **Ipotesi alternative** (le spiegazioni alternative considerate e perché sono state scartate o mantenute), **Assunzioni chiave** (le assunzioni da cui dipende il ragionamento).
-  5.  \`### 5. Lacune e prossimi passi\`: che cosa non è stato possibile accertare, che cosa colmerebbe ciascuna lacuna (es. l'ordinanza integrale, l'esito del riesame, la data dell'udienza) e gli indicatori che cambierebbero i giudizi.
-  6.  \`### 6. Fonti\`: una frase di sintesi sulla base delle fonti (quante fonti indipendenti, di che tipo, da quali dipendono i giudizi chiave), seguita da una tabella con TUTTE le fonti: \`| Rif. | Fonte | Chi è la fonte | Data di pubblicazione | Data di consultazione | Voto |\`. Nella colonna Fonte formatta ogni fonte come link Markdown cliccabile: \`[Titolo Articolo - Nome Giornale](URL)\`. Riferimenti \`F1\`, \`F2\`... nell'ordine.
-  7.  \`### 7. Metodo e limiti\`: due o tre frasi: report generato da un modello di IA con ricerca web su fonti giornalistiche aperte, periodo coperto dalle fonti, che cosa non è stato consultato (atti non pubblicati, banche dati riservate).
-  8.  \`### Allegato A. Entità coinvolte\`: persone (nome, ruolo, data di nascita se disponibile, posizione processuale) e aziende (denominazione, ruolo, provvedimento), con i riferimenti alle fonti.
-  9.  \`### Allegato B. Dati geografici riepilogativi\`: città, province e regioni coinvolte, con il ruolo di ciascun luogo nel caso.
-  10. \`### Allegato C. Verifiche con sistemi interni\` (Usa ESATTAMENTE e SOLO il testo: "Le verifiche con i sistemi interni non sono ancora state effettuate").
-- **NON DEVI includere** una sezione "Raccomandazioni".
-- **DISCLAIMER OBBLIGATORIO:** Alla fine del report, dopo tutte le altre sezioni, DEVI includere il seguente testo esatto in corsivo: *Questo report è stato sviluppato da ACTA DIURNA. Le informazioni devono essere validate da un analista prima di poter essere considerate valide.*
-- Se non trovi informazioni sufficienti, restituisci un oggetto JSON di errore: \`{"error": "Motivazione..."}\`.
-- **Formato del testo:** All'interno del \`reportContent\`, usa solo virgolette singole (') e non doppie (") per evitare errori di parsing JSON.
-- L'output finale DEVE essere un singolo oggetto JSON che rispetta lo schema, senza testo o commenti esterni.
+Struttura. Il report usa solo titoli di livello ### in quest'ordine; dentro le sezioni paragrafi, elenchi, grassetto e tabelle.
+1. ### 1. Sintesi (bottom line): 3-5 frasi su che cosa è accaduto, che cosa significa e quanto sei sicuro (un termine della scala o un livello di fiducia, mai nella stessa frase). Basta da sola per agire.
+2. ### 2. Giudizi chiave: elenco numerato; ogni giudizio è una frase con un termine della scala e i riferimenti alle fonti (F1, F3), seguita da una frase con il livello di fiducia e il motivo. Per esempio: 1. È probabile (55-80%) che il gruppo operasse anche in Campania, perché due ordinanze citano depositi a Caserta (F1, F2). Fiducia moderata: entrambe le ordinanze derivano dalla stessa indagine.
+3. ### 3. Fatti accertati: elenco numerato dei soli fatti, ciascuno con riferimento e voto della fonte (F1, A1). Le contestazioni dell'accusa riportate come tali.
+4. ### 4. Analisi: come i fatti sostengono i giudizi, con le etichette in grassetto **Modus operandi** (schema descritto dall'accusa, ruoli, flussi di denaro o di merce), **Ipotesi alternative** (considerate, e perché scartate o mantenute), **Assunzioni chiave**.
+5. ### 5. Lacune e prossimi passi: che cosa non è stato possibile accertare, che cosa colmerebbe ciascuna lacuna (l'ordinanza integrale, l'esito del riesame, la data dell'udienza) e gli indicatori che cambierebbero i giudizi.
+6. ### 6. Fonti: una frase sulla base delle fonti (quante indipendenti, di che tipo, da quali dipendono i giudizi), poi la tabella | Rif. | Fonte | Chi è la fonte | Data di pubblicazione | Data di consultazione | Voto | con tutte le fonti, la colonna Fonte come link Markdown [Titolo - Testata](URL) e i riferimenti F1, F2... nell'ordine.
+7. ### 7. Metodo e limiti: due o tre frasi: report generato da un modello di IA con ricerca web su fonti aperte, periodo coperto dalle fonti, che cosa non è stato consultato (atti non pubblicati, banche dati riservate).
+8. ### Allegato A. Entità coinvolte: persone (nome, ruolo, data di nascita se nota, posizione nel procedimento) e società (denominazione con forma, partita IVA se nota, ruolo, provvedimento), con i riferimenti alle fonti.
+9. ### Allegato B. Dati geografici riepilogativi: città, province e regioni, con il ruolo di ciascun luogo nel caso.
+10. ### Allegato C. Verifiche con sistemi interni, con questo solo testo: Le verifiche con i sistemi interni non sono ancora state effettuate.
+Non c'è una sezione di raccomandazioni. Alla fine, dopo tutte le sezioni, in corsivo: *Questo report è stato sviluppato da ACTA DIURNA. Le informazioni devono essere validate da un analista prima di poter essere considerate valide.*
 
-**DATI DEL CASO DA ANALIZZARE:**
-\`\`\`json
-CASE_DATA_PLACEHOLDER
-\`\`\`
+Se le fonti non bastano per una sezione, scrivilo nella sezione stessa e in Lacune.
 
-**SCHEMA DI OUTPUT JSON (OBBLIGATORIO):**
-\`\`\`json
-{
-  "reportContent": "string (CONTENUTO IN MARKDOWN)",
-  "updatedEntities": {
-    "individuals": [{ "name": "string", "age": "number | null", "legalAction": "string", "role": "string | null", "dateOfBirth": "string | null" }],
-    "companies": [{ "name": "string", "legalAction": "string" }]
-  }
-}
-\`\`\`
-`;
+Risposta: il solo report in Markdown, dalla sezione 1 all'avvertenza finale.`;
 
-const entityListsSchema = {
+const SISTEMA_ENTITA = `Estrai persone, società e legami da un report di analisi su un'operazione delle forze dell'ordine italiane, per Acta Diurna, un'applicazione civile che lavora su fonti aperte. Un campo che il report non riporta resta null: un valore dedotto è peggio di un campo vuoto, perché ogni dato viene confrontato con altre banche dati.
+
+Persone: nome_completo come scritto; nome e cognome separati, con ordine_certo true, solo se il testo li distingue senza dubbio. ruolo è che cosa fa la persona, posizione la sua situazione nel procedimento (indagato, arrestato, ai domiciliari). Data di nascita solo se completa, in AAAA-MM-GG; età se scritta; codice fiscale solo se scritto. Il sesso solo da «nato/nata» (sesso_fonte "nascita") o da una qualifica riferita alla persona come «l'indagata» (sesso_fonte "qualifica"), mai dal nome proprio.
+
+Società ed enti: ragione_sociale senza la forma giuridica, forma a parte, tipo tra societa, ente_pubblico e organizzazione; partita IVA, codice fiscale e REA solo se scritti; sede, stato, attività, settore, valore dei beni, ruolo nell'operazione.
+
+Legami persona-società con il ruolo come scritto, il tipo tra amministrazione, proprieta, dipendenza, rappresentanza e appartenenza, e la qualifica "di fatto" per prestanome e amministratori di fatto.`;
+
+const stringaONull = { type: ['string', 'null'] };
+const numeroONull = { type: ['number', 'null'] };
+
+/** Schema dell'uscita della fase extractEntities: la forma di EntitaEstratte. */
+const entitaSchema = {
     type: 'object',
+    additionalProperties: false,
+    required: ['persone', 'societa', 'legami'],
     properties: {
-        individuals: {
+        persone: {
             type: 'array',
             items: {
                 type: 'object',
+                additionalProperties: false,
+                required: ['nome_completo', 'nome', 'cognome', 'ordine_certo', 'sesso', 'sesso_fonte', 'data_nascita', 'luogo_nascita', 'cf', 'eta', 'ruolo', 'posizione'],
                 properties: {
-                    name: { type: 'string' },
-                    age: { type: 'number' },
-                    legalAction: { type: 'string' },
-                    role: { type: 'string' },
-                    dateOfBirth: { type: 'string' },
+                    nome_completo: { type: 'string' },
+                    nome: stringaONull, cognome: stringaONull,
+                    ordine_certo: { type: 'boolean' },
+                    sesso: { type: ['string', 'null'], enum: ['M', 'F', null] },
+                    sesso_fonte: { type: ['string', 'null'], enum: ['nascita', 'qualifica', null] },
+                    data_nascita: stringaONull, luogo_nascita: stringaONull, cf: stringaONull,
+                    eta: numeroONull, ruolo: stringaONull, posizione: stringaONull,
                 },
-                required: ['name', 'legalAction'],
             },
         },
-        companies: {
+        societa: {
             type: 'array',
             items: {
                 type: 'object',
+                additionalProperties: false,
+                required: ['ragione_sociale', 'forma', 'tipo', 'cf', 'piva', 'rea', 'sede', 'stato', 'attivita', 'settore', 'valore_beni', 'ruolo'],
                 properties: {
-                    name: { type: 'string' },
-                    legalAction: { type: 'string' },
+                    ragione_sociale: { type: 'string' },
+                    forma: stringaONull,
+                    tipo: { type: 'string', enum: ['societa', 'ente_pubblico', 'organizzazione'] },
+                    cf: stringaONull, piva: stringaONull, rea: stringaONull, sede: stringaONull, stato: stringaONull,
+                    attivita: stringaONull, settore: stringaONull, valore_beni: numeroONull, ruolo: stringaONull,
                 },
-                required: ['name', 'legalAction'],
+            },
+        },
+        legami: {
+            type: 'array',
+            items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['persona', 'societa', 'ruolo', 'tipo', 'qualifica'],
+                properties: {
+                    persona: { type: 'string' }, societa: { type: 'string' }, ruolo: { type: 'string' },
+                    tipo: { type: ['string', 'null'], enum: ['amministrazione', 'proprieta', 'dipendenza', 'rappresentanza', 'appartenenza', null] },
+                    qualifica: { type: ['string', 'null'], enum: ['di diritto', 'di fatto', null] },
+                },
             },
         },
     },
-    required: ['individuals', 'companies'],
 };
 
-const deepDiveSchema = {
-    type: 'object',
-    properties: {
-        reportContent: { type: 'string', description: 'The full intelligence report formatted in Markdown.' },
-        updatedEntities: entityListsSchema,
-    },
-    required: ['reportContent', 'updatedEntities'],
-};
-
+/**
+ * Report di approfondimento in Markdown semplice. Le entita' si estraggono dal
+ * report con una seconda chiamata breve, a schema: chiedere il report dentro un
+ * JSON obbligava a regole sulle virgolette che peggioravano il testo.
+ */
 export const generateDeepDiveReport = async (caseData: CaseData): Promise<DeepDiveReport> => {
   try {
-    const filledPrompt = deepDiveReportPrompt.replace('CASE_DATA_PLACEHOLDER', JSON.stringify(caseData, null, 2));
+    const prompt = `Data odierna: ${oggi()}.
 
-    const response = await runPhase('deepDive', { prompt: filledPrompt, webSearch: true, schema: deepDiveSchema });
+Caso da analizzare: ${JSON.stringify({ ...casoPerIlModello(caseData), provenance: caseData.provenance })}`;
 
-    if (!response.text) {
+    const response = await runPhase('deepDive', { system: SISTEMA_REPORT, prompt, webSearch: true });
+    const inizio = response.text.indexOf('### 1');
+    const reportContent = (inizio >= 0 ? response.text.slice(inizio) : response.text).trim();
+    if (!reportContent) {
         throw new Error("The AI model returned an empty response while generating the report.");
     }
-    
-    const result: any = extractJson(response.text) ?? {};
 
-    if (result.error || typeof result.reportContent !== 'string') {
-        throw new Error(result.error ? `AI reported an error: ${result.error}` : "Failed to parse report data from AI model.");
+    let updatedEntities: EntitaEstratte = {};
+    try {
+        const estrazione = await runPhase('extractEntities', { system: SISTEMA_ENTITA, prompt: reportContent, schema: entitaSchema });
+        updatedEntities = (extractJson(estrazione.text) as EntitaEstratte) ?? {};
+    } catch (errore) {
+        // Il report resta valido anche se l'estrazione delle entita' non riesce.
+        console.warn('[report] Estrazione delle entità dal report non riuscita:', errore);
     }
-    return result as DeepDiveReport;
+    return { reportContent, updatedEntities };
   } catch (e: any) {
     if (e.message?.includes("parse")) {
         throw new Error("Failed to parse report data from AI model.");
@@ -819,6 +776,16 @@ export const generateDeepDiveReport = async (caseData: CaseData): Promise<DeepDi
     handleApiError(e, `generating report for case ${caseData.caseID}`);
   }
 };
+
+const SISTEMA_REVISIONE = `Rivedi i criteri di interesse di una rassegna stampa OSINT sulle operazioni delle forze dell'ordine in Italia, per Acta Diurna, in base alle scelte dell'analista che la usa. I criteri dicono che cosa interessa: tipi di reato, soglie, aree, schemi. Le regole di estrazione, il perimetro e la forma dell'uscita stanno altrove e non vanno scritti qui.
+
+Guarda che cosa hanno in comune i casi che l'analista ha segnato come importanti o approfondito, e che cosa li distingue da quelli letti e da quelli archiviati come irrilevanti, con il motivo quando c'è (troppo vecchio, duplicato, fuori perimetro). Rendi più espliciti i criteri che spiegano le sue scelte e togli o restringi quelli che portano a notizie scartate. Se il feedback è poco, cambia poco.
+
+Risposta: solo il testo dei nuovi criteri, in italiano, in prosa, senza preambolo e senza commenti.`;
+
+/** Un testo che non sembra dei criteri si rifiuta, e restano quelli attuali. */
+const criteriAccettabili = (testo: string): boolean =>
+    testo.length >= 100 && testo.length <= 6000 && !/```|"summary"|"entita"|"provenance"/.test(testo);
 
 export const reviseSearchPrompt = async (
   highPriority: CaseData[],
@@ -828,66 +795,46 @@ export const reviseSearchPrompt = async (
   currentPrompt: string
 ): Promise<string> => {
   try {
-    const prompt = `
-      Sei un'IA stratega specializzata in OSINT. Il tuo compito è ottimizzare un prompt di ricerca per un altro modello IA (Chronicle), basandoti sul feedback di un analista umano.
+    const attuali = criteriDaUsare(currentPrompt);
+    const prompt = `Criteri attuali:
+${attuali}
 
-      **CONTESTO:**
-      L'analista ha classificato una serie di casi. La tua missione è analizzare questa classificazione per capire le sue priorità investigative e affinare le direttive di ricerca future di Chronicle.
+Casi segnati come importanti:
+${summarizeCasesForPrompt(highPriority)}
 
-      **DATI FORNITI:**
-      1.  **PROMPT ATTUALE:** Il prompt che Chronicle sta usando ora.
-          \`\`\`
-          ${currentPrompt}
-          \`\`\`
-      2.  **FEEDBACK DELL'ANALISTA (PONDERATO):**
-          *   **ALTA PRIORITÀ (Peso 3):** Casi marcati come "Importanti". Questi sono i più critici.
-              ${summarizeCasesForPrompt(highPriority)}
-          *   **MEDIA PRIORITÀ (Peso 2):** Casi per cui è stato richiesto un report di approfondimento. Forte segnale di interesse.
-              ${summarizeCasesForPrompt(mediumPriority)}
-          *   **RILEVANZA STANDARD (Peso 1):** Un campione di casi letti e analizzati. Rappresentano la baseline.
-              ${summarizeCasesForPrompt(standard)}
-          *   **IRRILEVANTI (Peso Negativo):** Casi archiviati. Esempi di cosa evitare. Analizza il motivo se specificato.
-              ${summarizeCasesForPrompt(irrelevant, true)}
+Casi con report di approfondimento:
+${summarizeCasesForPrompt(mediumPriority)}
 
-      **COMPITO:**
-      1.  **ANALIZZA:** Esamina i casi in tutte le categorie. Identifica i pattern, le parole chiave, i tipi di reato, le aree geografiche e le caratteristiche comuni nei casi ad alta e media priorità. Contrasta questi elementi con i casi standard e quelli irrilevanti. Presta particolare attenzione ai motivi di irrilevanza forniti per capire cosa escludere (es. notizie troppo vecchie).
-      2.  **STRATEGIZZA:** Formula una strategia per migliorare il prompt. Ad esempio: "L'analista sembra molto interessato a frodi fiscali che usano ASD nel Nord Italia. Devo rendere questo criterio più esplicito e prioritario nel prompt." oppure "L'analista sta scartando molte notizie perché vecchie, devo rafforzare la regola sulla data di pubblicazione."
-      3.  **RISCRIVI IL PROMPT:** Modifica la sezione "PARAMETRI DI RICERCA" del prompt attuale per riflettere la tua nuova strategia. Sii specifico. Aggiungi o rafforza parole chiave, modifica i criteri di rilevanza (es. importi sequestrati), o dai priorità a certe aree geografiche. **Mantieni intatte le regole critiche fondamentali (DATA, PERSONE, URL, etc.)** a meno che la strategia non richieda un loro specifico affinamento.
-      4.  **OUTPUT:** Restituisci **SOLO ED ESCLUSIVAMENTE** il testo completo del nuovo prompt ottimizzato, senza alcun commento o testo aggiuntivo.
-    `;
+Casi letti:
+${summarizeCasesForPrompt(standard)}
 
-    const response = await runPhase('revisePrompt', { prompt });
-    
-    if (!response.text) {
-        console.warn("Prompt revision returned no result. Keeping the current prompt.");
-        return currentPrompt;
+Casi archiviati come irrilevanti:
+${summarizeCasesForPrompt(irrelevant, true)}`;
+
+    const response = await runPhase('revisePrompt', { system: SISTEMA_REVISIONE, prompt });
+    const nuovi = response.text.trim();
+    if (!criteriAccettabili(nuovi)) {
+        console.warn("Prompt revision rejected: the result does not look like search criteria. Keeping the current ones.");
+        return attuali;
     }
-
-    return response.text.trim();
+    return nuovi;
   } catch (e: any) {
     handleApiError(e, 'prompt revision');
   }
 };
 
+const SISTEMA_TRADUZIONE = `Traduci in inglese professionale un report di analisi su un'operazione delle forze dell'ordine italiane, scritto da Acta Diurna, un'applicazione civile di OSINT, per analisti, giornalisti e ricercatori.
+
+Conserva esattamente il Markdown: titoli, elenchi, tabelle, link, grassetto e corsivo. I riferimenti alle fonti (F1, A1, B2) e gli URL restano come sono. I sette termini di probabilità diventano quelli della direttiva ICD 203: almost no chance, very unlikely, unlikely, roughly even chance, likely, very likely, almost certain; i livelli di fiducia, high, moderate e low confidence. Le qualifiche del procedimento vanno rese con il termine inglese corretto (indagato: suspect; imputato: defendant; arrestato: arrested). Traduci anche l'avvertenza finale, in corsivo.
+
+Risposta: il solo testo tradotto.`;
+
 export const translateReport = async (reportContent: string): Promise<string> => {
   try {
-    const prompt = `
-        Translate the following intelligence report into professional, formal English suitable for law enforcement agencies.
-        It is critical that you preserve the exact Markdown formatting of the original text (headings, lists, bold text, etc.).
-        Pay special attention to the final italicized disclaimer and translate it accurately, keeping it in italics.
-
-        REPORT TO TRANSLATE:
-        ---
-        ${reportContent}
-        ---
-    `;
-
-    const response = await runPhase('translate', { prompt });
-
+    const response = await runPhase('translate', { system: SISTEMA_TRADUZIONE, prompt: reportContent });
     if (!response.text) {
         throw new Error("Translation failed: The AI model returned an empty response.");
     }
-
     return response.text.trim();
   } catch (e: any) {
     handleApiError(e, 'report translation');

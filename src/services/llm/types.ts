@@ -15,9 +15,16 @@ export type Phase =
     | 'deepDive'
     | 'revisePrompt'
     | 'translate'
-    | 'geocode';
+    | 'geocode'
+    | 'extractEntities';
 
 export interface PhaseRequest {
+    /**
+     * Istruzioni fisse della fase: identita', regole, forma dell'uscita. Con
+     * Claude vanno in cache, cosi' le chiamate successive le pagano un decimo.
+     */
+    system?: string;
+    /** Dati della singola chiamata: data, caso, articolo, profilo. */
     prompt: string;
     /** La fase ha bisogno di cercare e leggere sul web. */
     webSearch?: boolean;

@@ -1,6 +1,6 @@
 {
   "name": "acta-diurna",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Dashboard OSINT che monitora fonti giornalistiche italiane per individuare e analizzare operazioni delle forze dell'ordine, strutturandole in casi di intelligence.",
@@ -13,7 +13,7 @@
   "bugs": "https://github.com/SOsintOps/acta-diurna/issues",
   "homepage": "https://github.com/SOsintOps/acta-diurna#readme",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "scripts": {
     "dev": "vite",

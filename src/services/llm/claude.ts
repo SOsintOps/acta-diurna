@@ -28,6 +28,7 @@ export const CLAUDE_PHASES: Record<Phase, PhaseModel> = {
     revisePrompt: { model: 'claude-opus-5-5',   effort: 'high',   maxSearches: 0,  label: 'Revisione prompt',  reason: 'Rara, riscrive le regole di ricerca' },
     translate:    { model: 'claude-sonnet-5-5', effort: 'low',    maxSearches: 0,  label: 'Traduzione',        reason: 'Registro giuridico, Markdown intatto' },
     geocode:      { model: 'claude-haiku-5-5',  effort: 'low',    maxSearches: 0,  label: 'Geocodifica',       reason: 'Domanda chiusa, molte chiamate' },
+    extractEntities: { model: 'claude-sonnet-5-5', effort: 'low', maxSearches: 0, label: 'Entità dal report', reason: 'Estrazione a schema da un testo già scritto' },
 };
 
 // Ripresa di un turno sospeso dal server (stop_reason "pause_turn"): oltre
@@ -150,6 +151,9 @@ export const runClaude = async (phase: Phase, request: PhaseRequest): Promise<Ph
             const response = await anthropic.beta.messages.stream({
                 model,
                 max_tokens: phase === 'geocode' ? 1024 : 64000,
+                ...(request.system
+                    ? { system: [{ type: 'text' as const, text: request.system, cache_control: { type: 'ephemeral' as const } }] }
+                    : {}),
                 messages,
                 output_config: {
                     effort,

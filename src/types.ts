@@ -40,19 +40,14 @@ export interface CaseData {
     seizedAssetsValue: number | null;
     seizedAssetsDescription: string | null;
   };
-  entities: {
-    individuals: {
-      name:string;
-      age: number | null;
-      legalAction: string;
-      role: string | null;
-      dateOfBirth: string | null;
-    }[];
-    companies: {
-      name: string;
-      legalAction: string;
-    }[];
-  };
+  /**
+   * Persone, societa', citazioni e legami nel formato comune con Iudex e
+   * Praeco (italgiure-work/comune/entita-formato.md). Assente solo negli
+   * archivi non ancora migrati.
+   */
+  entita?: EntitaCaso;
+  /** Formato delle entita' fino alla 0.3: si legge solo per migrarlo. */
+  entities?: EntitaLegacy;
   provenance: {
     sourceType: 'Primary' | 'Secondary' | 'Tertiary';
     sourceName: string;
@@ -78,19 +73,157 @@ export interface CaseData {
 
 export interface DeepDiveReport {
   reportContent: string;
-  updatedEntities: {
-    individuals: {
-      name: string;
-      age: number | null;
-      legalAction: string;
-      role: string | null;
-      dateOfBirth: string | null;
-    }[];
-    companies: {
-      name: string;
-      legalAction: string;
-    }[];
-  };
+  updatedEntities: EntitaEstratte;
+}
+
+// --- Entita' -----------------------------------------------------------------
+// Formato comune con Iudex e Praeco: nomi italiani, stessi campi e stessi uid
+// (italgiure-work/comune/entita-formato.md). Le estensioni di Acta Diurna sono
+// campi in piu' che le altre app ignorano.
+
+export type Sesso = 'M' | 'F';
+export type SessoFonte = 'nascita' | 'cf' | 'qualifica';
+
+export interface Persona {
+  uid: string;
+  nome: string;
+  cognome: string;
+  /** true se nome e cognome sono distinti con certezza, false se l'ordine e' dedotto. */
+  ordine_certo: boolean;
+  sesso: Sesso | null;
+  sesso_fonte: SessoFonte | null;
+  /** AAAA-MM-GG, solo se completa. */
+  data_nascita: string | null;
+  luogo_nascita: string | null;
+  /** Solo se scritto nel testo e convalidato, mai calcolato. */
+  cf: string | null;
+  creato_il: string;
+  mietitore: string;
+  // Estensioni di Acta Diurna.
+  nome_come_scritto: string;
+  eta: number | null;
+  /** I due anni di nascita possibili, dall'eta' e dalla data dell'articolo. */
+  anni_nascita_stimati: [number, number] | null;
+}
+
+export type TipoSocieta = 'societa' | 'ente_pubblico' | 'organizzazione';
+
+export interface Societa {
+  uid: string;
+  ragione_sociale: string;
+  forma: string | null;
+  tipo: TipoSocieta;
+  cf: string | null;
+  piva: string | null;
+  rea: string | null;
+  paese: string | null;
+  sede: string | null;
+  stato: string | null;
+  creato_il: string;
+  mietitore: string;
+  // Estensioni di Acta Diurna.
+  attivita: string | null;
+  settore: string | null;
+  valore_beni: number | null;
+}
+
+export interface Citazione {
+  uid_entita: string;
+  tipo_entita: 'persona' | 'societa';
+  /** Chiave del provvedimento: acta:<caseID>. */
+  id_provvedimento: string;
+  ruolo: string | null;
+  fonte: 'motore' | 'migrazione';
+  mietitore: string;
+  creato_il: string;
+  // Estensioni di Acta Diurna.
+  /** Posizione nel procedimento come scritta: indagato, arrestato, ai domiciliari... */
+  posizione: string | null;
+  fonte_url: string | null;
+}
+
+export type TipoLegame = 'amministrazione' | 'proprieta' | 'dipendenza' | 'rappresentanza' | 'appartenenza';
+
+export interface Legame {
+  uid_persona: string;
+  uid_societa: string;
+  tipo: TipoLegame | null;
+  /** Come scritto: «amministratore unico», «socio al 34 %». */
+  ruolo: string;
+  qualifica: 'di diritto' | 'di fatto' | null;
+  id_provvedimento: string;
+  fonte: 'motore' | 'migrazione';
+  mietitore: string;
+  creato_il: string;
+}
+
+export interface EntitaCaso {
+  persone: Persona[];
+  societa: Societa[];
+  citazioni: Citazione[];
+  legami: Legame[];
+}
+
+/** Come le entita' arrivano dal modello, prima di normalizzazione, convalida e uid. */
+export interface PersonaEstratta {
+  nome_completo: string;
+  nome?: string | null;
+  cognome?: string | null;
+  ordine_certo?: boolean | null;
+  sesso?: Sesso | null;
+  sesso_fonte?: SessoFonte | null;
+  data_nascita?: string | null;
+  luogo_nascita?: string | null;
+  cf?: string | null;
+  eta?: number | null;
+  ruolo?: string | null;
+  posizione?: string | null;
+  fonte_url?: string | null;
+}
+
+export interface SocietaEstratta {
+  ragione_sociale: string;
+  forma?: string | null;
+  tipo?: TipoSocieta | null;
+  cf?: string | null;
+  piva?: string | null;
+  rea?: string | null;
+  paese?: string | null;
+  sede?: string | null;
+  stato?: string | null;
+  attivita?: string | null;
+  settore?: string | null;
+  valore_beni?: number | null;
+  ruolo?: string | null;
+  fonte_url?: string | null;
+}
+
+export interface LegameEstratto {
+  persona: string;
+  societa: string;
+  ruolo: string;
+  tipo?: TipoLegame | null;
+  qualifica?: 'di diritto' | 'di fatto' | null;
+}
+
+export interface EntitaEstratte {
+  persone?: PersonaEstratta[];
+  societa?: SocietaEstratta[];
+  legami?: LegameEstratto[];
+}
+
+export interface EntitaLegacy {
+  individuals: {
+    name: string;
+    age: number | null;
+    legalAction: string;
+    role: string | null;
+    dateOfBirth: string | null;
+  }[];
+  companies: {
+    name: string;
+    legalAction: string;
+  }[];
 }
 
 export interface PromptHistoryEntry {

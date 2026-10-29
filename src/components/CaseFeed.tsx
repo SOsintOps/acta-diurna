@@ -6,6 +6,7 @@ import PulsingTriangle from './icons/PulsingTriangle';
 import { ThemeContext } from '../contexts/ThemeContext';
 import StarIcon from './icons/StarIcon';
 import WarningIcon from './icons/WarningIcon';
+import { entitaDelCaso, testoRicercabile } from '../services/entita';
 
 interface CaseRowProps {
   caseItem: CaseData;
@@ -142,8 +143,7 @@ const CaseFeed: React.FC<CaseFeedProps> = ({ cases, onSelectCase, selectedCaseId
           locationMatch ||
           c.summary.crimeTypes.some(ct => ct.toLowerCase().includes(lowerSearchTerm)) ||
           (c.details.operationName && c.details.operationName.toLowerCase().includes(lowerSearchTerm)) ||
-          c.entities.individuals.some(ind => ind.name && ind.name.toLowerCase().includes(lowerSearchTerm)) ||
-          c.entities.companies.some(com => com.name && com.name.toLowerCase().includes(lowerSearchTerm))
+          testoRicercabile(entitaDelCaso(c)).includes(lowerSearchTerm)
       );
 
       const dateMatch = !filterDate || c.summary.dateOfOperation === filterDate;

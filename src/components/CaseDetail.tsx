@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { translateReport } from '../services/aiService';
 import WarningIcon from './icons/WarningIcon';
+import { dettagliSocieta, entitaDelCaso, nascitaPersona, nomePersona, nomeSocieta, ruoliDi } from '../services/entita';
 
 interface CaseDetailProps {
   appVersion: string;
@@ -92,12 +93,12 @@ ${data.details?.investigationReason || 'Nessun riepilogo disponibile.'}\\par
 \\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx4000
 \\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx6000
 \\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx8000
-\\b NOME\\b0\\intbl \\b RUOLO\\b0\\intbl \\b DATA DI NASCITA\\b0\\intbl \\cell
-${(data.entities.individuals || []).map(p => `\\trowd \\trgaph108\\trleft-108\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx4000\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx6000\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx8000 ${p.name || ''}\\intbl ${p.role || ''}\\intbl ${p.dateOfBirth || ''}\\intbl \\cell`).join('\\row ')}\\row
+\\b NOME\\b0\\intbl \\b RUOLO E POSIZIONE\\b0\\intbl \\b NASCITA\\b0\\intbl \\cell
+${entitaDelCaso(data).persone.map(p => `\\trowd \\trgaph108\\trleft-108\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx4000\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx6000\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx8000 ${nomePersona(p)}${p.cf ? ` (CF ${p.cf})` : ''}\\intbl ${ruoliDi(entitaDelCaso(data), p.uid)}\\intbl ${nascitaPersona(p)}\\intbl \\cell`).join('\\row ')}\\row
 \\par
 {\\b AZIENDE COINVOLTE}\\par
-\\trowd \\trgaph108\\trleft-108\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx4000\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx8000\\b NOME\\b0\\intbl \\b PROVVEDIMENTO\\b0\\intbl \\cell
-${(data.entities.companies || []).map(c => `\\trowd \\trgaph108\\trleft-108\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx4000\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx8000 ${c.name || ''}\\intbl ${c.legalAction || ''}\\intbl \\cell`).join('\\row ')}\\row
+\\trowd \\trgaph108\\trleft-108\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx4000\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx8000\\b NOME\\b0\\intbl \\b RUOLO E DETTAGLI\\b0\\intbl \\cell
+${entitaDelCaso(data).societa.map(c => `\\trowd \\trgaph108\\trleft-108\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx4000\\clbrdrb\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10 \\clbrdrt\\brdrs\\brdrw10 \\cellx8000 ${nomeSocieta(c)}\\intbl ${[ruoliDi(entitaDelCaso(data), c.uid), dettagliSocieta(c)].filter(Boolean).join(' - ')}\\intbl \\cell`).join('\\row ')}\\row
 \\par
 {\\b FONTI}\\par
 ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLINK "${p.url}"}}{\\fldrslt{\\ul ${p.sourceName}}}}\\par`).join('')}
@@ -236,6 +237,7 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
     const hasExistingReport = caseData.hasReport && !!caseData.reportContent;
 
     const { cities = [], regions = [] } = caseData.summary.location || {};
+    const entita = entitaDelCaso(caseData);
     const primaryCity = cities.length > 0 ? cities[0] : null;
     const secondaryCities = cities.length > 1 ? cities.slice(1) : [];
 
@@ -310,34 +312,53 @@ ${(data.provenance || []).map((p, i) => `${i + 1}. {\\field{\\*\\fldinst{HYPERLI
                         </DetailSection>
 
                         <DetailSection title="PERSONE COINVOLTE">
-                            {(caseData.entities.individuals || []).length > 0 ? (
+                            {entita.persone.length > 0 ? (
                                 <ol className="list-decimal list-inside space-y-2">
-                                    {(caseData.entities.individuals || []).map((ind, i) => (
-                                        <li key={i}>
+                                    {entita.persone.map(p => (
+                                        <li key={p.uid}>
                                             <span>
-                                                {ind.name}
-                                                {ind.role && ind.role.toLowerCase() !== 'sconosciuto' && <span className="italic"> ({ind.role})</span>}
-                                                {ind.dateOfBirth ? `, nato il ${ind.dateOfBirth}` : (ind.age ? `, ${ind.age} anni` : '')}
-                                                {ind.legalAction && ` - `}
-                                                {ind.legalAction && <span className="font-semibold">{ind.legalAction}</span>}
+                                                {nomePersona(p)}
+                                                {ruoliDi(entita, p.uid) && <span className="font-semibold"> - {ruoliDi(entita, p.uid)}</span>}
+                                                {nascitaPersona(p) && <span className={strongMutedTextClass}>, {nascitaPersona(p)}</span>}
+                                                {p.cf && <span className={`font-mono text-xs ${strongMutedTextClass}`}> CF {p.cf}</span>}
                                             </span>
                                         </li>
                                     ))}
                                 </ol>
                             ) : <p className={strongMutedTextClass}>Nessun individuo identificato.</p>}
                         </DetailSection>
-                        
+
                         <DetailSection title="AZIENDE COINVOLTE">
-                            {(caseData.entities.companies || []).length > 0 ? (
+                            {entita.societa.length > 0 ? (
                                 <ol className="list-decimal list-inside space-y-2">
-                                    {(caseData.entities.companies || []).map((comp, i) => (
-                                        <li key={i}>
-                                            <span>{comp.name} - <span className="font-semibold">{comp.legalAction}</span></span>
+                                    {entita.societa.map(s => (
+                                        <li key={s.uid}>
+                                            <span>
+                                                {nomeSocieta(s)}
+                                                {ruoliDi(entita, s.uid) && <span className="font-semibold"> - {ruoliDi(entita, s.uid)}</span>}
+                                                {dettagliSocieta(s) && <span className={strongMutedTextClass}>, {dettagliSocieta(s)}</span>}
+                                            </span>
                                         </li>
                                     ))}
                                 </ol>
                             ) : <p className={strongMutedTextClass}>Nessuna azienda identificata.</p>}
                         </DetailSection>
+
+                        {entita.legami.length > 0 && (
+                            <DetailSection title="LEGAMI PERSONA-SOCIETÀ">
+                                <ul className="list-disc list-inside space-y-1">
+                                    {entita.legami.map(l => {
+                                        const persona = entita.persone.find(p => p.uid === l.uid_persona);
+                                        const societa = entita.societa.find(s => s.uid === l.uid_societa);
+                                        return (
+                                            <li key={`${l.uid_persona}-${l.uid_societa}-${l.ruolo}`}>
+                                                {persona ? nomePersona(persona) : '?'} <span className="italic">{l.ruolo}{l.qualifica === 'di fatto' ? ' (di fatto)' : ''}</span> {societa ? nomeSocieta(societa) : '?'}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </DetailSection>
+                        )}
 
                         <DetailSection title="FONTI">
                             <ol className="list-decimal list-inside font-mono text-sm space-y-1">

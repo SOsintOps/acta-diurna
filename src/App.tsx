@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { generateCaseData, updateCaseDetails, generateDeepDiveReport, analyzeSingleUrl, reviseSearchPrompt, defaultPrompt, loadCoordinatesCache } from './services/aiService';
-import type { CaseData, CrimeCategory, PromptHistoryEntry, UserFeedback } from './types';
+import type { CaseData, PromptHistoryEntry, UserFeedback } from './types';
 import * as db from './db';
 import LoadingScreen from './components/LoadingScreen';
 import Dashboard from './components/Dashboard';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useCaseStore } from './store/caseStore';
-import { crimeCategoryShortCodes } from './utils/crimeCategorizer';
+import { costruisciEntita, entitaDelCaso, unisciEntita } from './services/entita';
 import RevisionProgressModal from './components/RevisionProgressModal';
 import ArchiveOptionsModal from './components/ArchiveOptionsModal';
 import ModelSelectorModal from './components/ModelSelectorModal';
@@ -16,7 +16,7 @@ import { hasCredentials } from './services/apiKey';
 import PromptHistoryModal from './components/PromptHistoryModal';
 import DocsModal from './components/DocsModal';
 import ImportOptionsModal from './components/ImportOptionsModal';
-import { migrateImportedData } from './utils/migration';
+import { migrateImportedData, migraEntitaArchivio } from './utils/migration';
 
 const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -213,6 +213,8 @@ const App: React.FC = () => {
   useEffect(() => {
     async function loadInitialData() {
         await loadCoordinatesCache();
+        // Prima di mostrare l'archivio, le entita' dei casi vecchi passano al formato comune.
+        await migraEntitaArchivio().catch(err => console.error('Entity migration failed:', err));
 
         // Senza chiave non si chiama il modello: si chiede la chiave e basta.
         // L'archivio gia' raccolto resta consultabile in ogni caso.
@@ -307,26 +309,15 @@ const App: React.FC = () => {
         
         setReport({ caseID, content: deepDiveResult.reportContent });
 
-        const combinedIndividuals = [...(caseToReport.entities.individuals || [])];
-        const existingIndNames = new Set(combinedIndividuals.map(i => i.name.toLowerCase()));
-        (deepDiveResult.updatedEntities.individuals || []).forEach(ind => {
-            if (!existingIndNames.has(ind.name.toLowerCase())) {
-                combinedIndividuals.push(ind);
-            }
+        // Le entita' del report si uniscono a quelle del caso per identita' (uid):
+        // nessuna si perde, e una persona gia' nota riceve i dati che le mancavano.
+        const entitaDalReport = await costruisciEntita(deepDiveResult.updatedEntities, {
+            caseID, dataArticolo: caseToReport.summary.dateOfOperation,
         });
-
-        const combinedCompanies = [...(caseToReport.entities.companies || [])];
-        const existingCompNames = new Set(combinedCompanies.map(c => c.name.toLowerCase()));
-        (deepDiveResult.updatedEntities.companies || []).forEach(comp => {
-            if (!existingCompNames.has(comp.name.toLowerCase())) {
-                combinedCompanies.push(comp);
-            }
-        });
-        
         const updatedCaseData: Partial<CaseData> = {
             hasReport: true,
             reportContent: deepDiveResult.reportContent,
-            entities: { individuals: combinedIndividuals, companies: combinedCompanies },
+            entita: unisciEntita(entitaDelCaso(caseToReport), entitaDalReport),
             lastUpdateTimestamp: new Date().toISOString()
         };
 
@@ -370,53 +361,17 @@ const App: React.FC = () => {
 
     try {
         const allCases = await db.getAllCases();
-        const partialCase = await analyzeSingleUrl(url, allCases);
-
-        if (!partialCase || !partialCase.summary?.title) {
-            throw new Error("L'analisi dell'URL non ha prodotto un caso valido.");
-        }
-
-        const now = new Date();
-        const crimeCode = (partialCase.summary.crimeTypes && partialCase.summary.crimeTypes.length > 0)
-            // crimeTypes arriva dall'IA come string[]: la chiave puo' non
-            // corrispondere a nessuna categoria nota, e in quel caso vale 'OTH'.
-            ? crimeCategoryShortCodes[partialCase.summary.crimeTypes[0] as CrimeCategory] || 'OTH'
-            : 'OTH';
-        
-        const counter = await db.incrementAndGetCaseCounter();
-        const progressiveId = String(counter).padStart(3, '0');
-        const caseID = `${now.toISOString().slice(0, 10).replace(/-/g, '')}-${crimeCode}-MANUAL-${progressiveId}`;
+        // analyzeSingleUrl restituisce il caso gia' completo: ID, luoghi
+        // geocodificati, categorie convalidate, entita' nel formato comune.
+        const caso = await analyzeSingleUrl(url, allCases);
+        const caseID = caso.caseID;
 
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 30);
 
         const newCase: CaseData = {
-            caseID: caseID,
-            initialReportTimestamp: now.toISOString(),
-            lastUpdateTimestamp: now.toISOString(),
-            status: 'Updated',
-            summary: partialCase.summary,
-            // analyzeSingleUrl restituisce un Partial: se l'IA omette un campo
-            // il caso va comunque costruito integro, con gli stessi default
-            // che generateCaseData applica ai casi trovati automaticamente.
-            details: partialCase.details ?? {
-                involvedForces: [],
-                operationName: null,
-                investigationReason: '',
-                seizedAssetsValue: null,
-                seizedAssetsDescription: null,
-            },
-            entities: partialCase.entities ?? { individuals: [], companies: [] },
-            provenance: partialCase.provenance ?? [],
-            updates: [],
-            audio: partialCase.audio ?? {
-                ttsScript: partialCase.summary.title,
-                ttsScriptEn: 'Summary not available.',
-            },
+            ...caso,
             isImportant: true,
-            isRead: true,
-            hasReport: false,
-            sourceMethod: 'AnalystReported',
             userFeedback: 'important',
             importantUntil: expiryDate.toISOString(),
         };

@@ -11,6 +11,7 @@ import ImportProgressModal from './ImportProgressModal';
 import { useCaseStore } from '../store/caseStore';
 import ErrorBanner from './ErrorBanner';
 import HelpMenu from './HelpMenu';
+import { esportaFtm, esportaPacchetto, scarica } from '../services/esportaEntita';
 
 interface DashboardProps {
   appVersion: string;
@@ -175,6 +176,20 @@ const Dashboard: React.FC<DashboardProps> = ({ appVersion, onSelectCase, onCheck
           className={`font-mono text-sm px-3 py-1 border transition-colors duration-200 ${dbButtonThemeClass}`}
         >
           ESPORTA DB
+        </button>
+        <button
+          onClick={async () => scarica(await esportaFtm(cases), `acta-diurna-entita-${new Date().toISOString().slice(0, 10)}.ftm`)}
+          title="Persone, società e casi in FollowTheMoney, nel formato comune con Iudex e Praeco"
+          className={`font-mono text-sm px-3 py-1 border transition-colors duration-200 ${dbButtonThemeClass}`}
+        >
+          ESPORTA FTM
+        </button>
+        <button
+          onClick={async () => scarica(await esportaPacchetto(cases), `acta-diurna-pacchetto-${new Date().toISOString().slice(0, 10)}.jsonl`)}
+          title="Pacchetto JSONL di scambio con Iudex e Praeco"
+          className={`font-mono text-sm px-3 py-1 border transition-colors duration-200 ${dbButtonThemeClass}`}
+        >
+          ESPORTA JSONL
         </button>
         <button
           onClick={onClearDatabase}

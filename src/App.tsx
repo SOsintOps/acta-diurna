@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { generateCaseData, updateCaseDetails, generateDeepDiveReport, analyzeSingleUrl, reviseSearchPrompt, defaultPrompt, loadCoordinatesCache } from './services/geminiService';
+import { generateCaseData, updateCaseDetails, generateDeepDiveReport, analyzeSingleUrl, reviseSearchPrompt, defaultPrompt, loadCoordinatesCache } from './services/aiService';
 import type { CaseData, CrimeCategory, PromptHistoryEntry, UserFeedback } from './types';
 import * as db from './db';
 import LoadingScreen from './components/LoadingScreen';
@@ -205,7 +205,7 @@ const App: React.FC = () => {
 
         // Senza chiave non si chiama il modello: si chiede la chiave e basta.
         // L'archivio gia' raccolto resta consultabile in ogni caso.
-        const keyConfigured = await hasApiKey();
+        const keyConfigured = await hasApiKey(useCaseStore.getState().aiProvider);
         if (!keyConfigured) {
             setIsApiKeyModalOpen(true);
         }

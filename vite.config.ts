@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
       // Attenzione: se la fornisci, finisce in chiaro nel bundle.
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      'process.env.ANTHROPIC_API_KEY': JSON.stringify(env.ANTHROPIC_API_KEY),
       'process.env.APP_VERSION': JSON.stringify(version),
     },
     resolve: {

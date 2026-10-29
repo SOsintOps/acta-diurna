@@ -19,6 +19,7 @@ export const useCaseStore = create<CaseStore>()(
       isPromptHistoryOpen: false,
       isApiKeyModalOpen: false,
       aiModel: 'gemini-2.5-flash',
+      aiProvider: 'gemini',
 
       setCases: (cases) => set({ cases }),
       setSelectedCase: (caseData) => set({ selectedCase: caseData }),
@@ -38,16 +39,18 @@ export const useCaseStore = create<CaseStore>()(
       setIsPromptHistoryOpen: (isOpen) => set({ isPromptHistoryOpen: isOpen }),
       setIsApiKeyModalOpen: (isOpen) => set({ isApiKeyModalOpen: isOpen }),
       setAiModel: (model) => set({ aiModel: model }),
+      setAiProvider: (provider) => set({ aiProvider: provider }),
     }),
     {
       // Chiave storica, mantenuta per non perdere le impostazioni salvate
-      // (modello AI scelto, override del monitoraggio) al rebrand.
+      // (fornitore e modello AI scelti, override del monitoraggio) al rebrand.
       name: 'police-chronicle-storage',
       storage: createJSONStorage(() => localStorage),
       // Persist user preferences: theme, override, and selected AI model
       partialize: (state) => ({ 
         isOverrideActive: state.isOverrideActive,
-        aiModel: state.aiModel 
+        aiModel: state.aiModel,
+        aiProvider: state.aiProvider,
       }),
     }
   )

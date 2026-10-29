@@ -1,10 +1,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useCaseStore } from '../store/caseStore';
-import { clearApiKey, hasApiKey, isEnvOverrideActive, setApiKey } from '../services/apiKey';
+import { clearApiKey, hasApiKey, isEnvOverrideActive, setApiKey, PROVIDER_LABEL } from '../services/apiKey';
 
 /**
- * Inserimento della chiave API da parte dell'admin.
+ * Inserimento della chiave API da parte dell'admin, per il fornitore scelto
+ * nella finestra del modello: ogni fornitore ha la sua chiave.
  *
  * La finestra mostra soltanto se una chiave e' presente, mai il suo valore:
  * chi apre il pannello non deve poter leggere la chiave di chi l'ha inserita.
@@ -14,14 +15,14 @@ import { clearApiKey, hasApiKey, isEnvOverrideActive, setApiKey } from '../servi
  * gettoni in index.css e non da ternari sul tema.
  */
 const ApiKeyModal: React.FC = () => {
-    const { isApiKeyModalOpen, setIsApiKeyModalOpen } = useCaseStore();
+    const { isApiKeyModalOpen, setIsApiKeyModalOpen, aiProvider } = useCaseStore();
 
     const [value, setValue] = useState('');
     const [keyPresent, setKeyPresent] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    const overrideActive = isEnvOverrideActive();
+    const overrideActive = isEnvOverrideActive(aiProvider);
 
     useEffect(() => {
         if (!isApiKeyModalOpen) {
@@ -29,8 +30,8 @@ const ApiKeyModal: React.FC = () => {
         }
         setValue('');
         setMessage(null);
-        hasApiKey().then(setKeyPresent);
-    }, [isApiKeyModalOpen]);
+        hasApiKey(aiProvider).then(setKeyPresent);
+    }, [isApiKeyModalOpen, aiProvider]);
 
     if (!isApiKeyModalOpen) {
         return null;
@@ -40,7 +41,7 @@ const ApiKeyModal: React.FC = () => {
         setIsSaving(true);
         setMessage(null);
         try {
-            await setApiKey(value);
+            await setApiKey(aiProvider, value);
             setKeyPresent(true);
             setValue('');
             setIsApiKeyModalOpen(false);
@@ -52,7 +53,7 @@ const ApiKeyModal: React.FC = () => {
     };
 
     const handleClear = async () => {
-        await clearApiKey();
+        await clearApiKey(aiProvider);
         setKeyPresent(false);
         setMessage('Chiave rimossa.');
     };
@@ -70,7 +71,7 @@ const ApiKeyModal: React.FC = () => {
 
                 <div className="px-3 pt-6 pb-3">
                     <div className="flex items-center text-xs mb-4">
-                        <span className="sam-status">CHIAVE</span>
+                        <span className="sam-status">CHIAVE {PROVIDER_LABEL[aiProvider]}</span>
                         {keyPresent ? (
                             <span className="sam-confirm px-2 tracking-[2px]">CONFIGURATA</span>
                         ) : (

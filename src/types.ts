@@ -1,4 +1,4 @@
-
+import type { AiProvider } from './services/llm/types';
 
 export enum CrimeCategory {
   ORGANIZED_CRIME = 'ORGANIZED_CRIME',
@@ -121,6 +121,7 @@ export interface CaseStore {
   isPromptHistoryOpen: boolean;
   isApiKeyModalOpen: boolean;
   aiModel: string;
+  aiProvider: AiProvider;
   error: string | null;
   activeAction: { caseID: string; action: 'updating' | 'reporting' | 'analyzingUrl' } | null;
   report: { caseID: string; content: string } | null;
@@ -138,4 +139,5 @@ export interface CaseStore {
   setIsPromptHistoryOpen: (isOpen: boolean) => void;
   setIsApiKeyModalOpen: (isOpen: boolean) => void;
   setAiModel: (model: string) => void;
+  setAiProvider: (provider: AiProvider) => void;
 }

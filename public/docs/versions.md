@@ -4,6 +4,35 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
 
 ---
 
+### Versione 0.3.0
+*Data: 2026-10-29*
+
+**Claude come secondo fornitore, con un modello per fase**
+
+Nella finestra **MODELLO AI** si sceglie ora tra Google Gemini e Anthropic
+Claude. Gemini usa un solo modello per tutto; Claude usa il modello più adatto
+a ciascuna fase:
+
+| Fase | Modello |
+|---|---|
+| Rassegna, analisi di un URL, aggiornamento di un caso | Claude Sonnet 5.5 |
+| Report di approfondimento, revisione del profilo di ricerca | Claude Opus 5.5 |
+| Traduzione del report | Claude Sonnet 5.5 |
+| Geocodifica delle località | Claude Haiku 5.5 |
+
+Con Claude la ricerca e la lettura degli articoli usano gli strumenti web di
+Anthropic, e la verifica della provenienza lavora sugli URL delle pagine
+effettivamente consultate. Ogni fornitore ha la sua chiave API.
+
+**Correzioni**
+
+-   La rassegna riceve la data di oggi: prima il modello giudicava gli «ultimi 3
+    giorni» senza sapere che giorno fosse.
+-   L'identificativo del caso lo assegna sempre il contatore locale. Prima
+    prevaleva quello proposto dal modello, che poteva ripetersi tra due rassegne.
+
+---
+
 ### Versione 0.2.1
 *Data: 2026-10-13*
 

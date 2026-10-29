@@ -1,34 +1,11 @@
-import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
+import { runPhase, LlmError, type SourceRef } from './llm';
 import type { CaseData, DeepDiveReport, CrimeCategory } from '../types';
 import { crimeCategoryShortCodes, normalizeRegionName } from "../utils/crimeCategorizer";
 import { getActivePrompt, incrementAndGetCaseCounter, getSettings, setSettings } from '../db';
-import { getApiKey } from './apiKey';
-import { useCaseStore } from '../store/caseStore';
 
 
-// --- ATTENZIONE: SICUREZZA API KEY ---
-// NON INSERIRE LA CHIAVE DIRETTAMENTE NEL CODICE.
-// La chiave la inserisce l'admin dall'interfaccia e vive nella tabella
-// `settings` del database; una chiave da ambiente, se fornita a chi compila,
-// vince su quella salvata. Vedi services/apiKey.ts.
-//
-// Il client si costruisce alla prima chiamata e non al caricamento del modulo:
-// altrimenti l'applicazione non parte quando la chiave manca, e senza avviarsi
-// non c'e' modo di inserirla.
-let client: GoogleGenAI | null = null;
-let clientKey: string | null = null;
-
-const getClient = async (): Promise<GoogleGenAI> => {
-    const key = await getApiKey();
-    if (!key) {
-        throw new Error('Chiave API non configurata. Inseriscila dal pannello di amministrazione.');
-    }
-    if (!client || clientKey !== key) {
-        client = new GoogleGenAI({ apiKey: key });
-        clientKey = key;
-    }
-    return client;
-};
+// Prompt e post-elaborazione dei casi. Quale fornitore e quale modello
+// rispondono lo decide services/llm: qui non compare nessun SDK.
 
 
 // The initial hardcoded list remains as a fallback/bootstrap
@@ -99,7 +76,10 @@ let cityCoordinatesCache: { [key: string]: { lat: number; lng: number } } = {};
 // che fa capire a TypeScript che ogni chiamata interrompe il flusso: senza,
 // le funzioni che terminano con handleApiError risultano "prive di return".
 const handleApiError: (error: any, context: string) => never = (error, context) => {
-    console.error(`Gemini API call failed in ${context}:`, error);
+    console.error(`AI call failed in ${context}:`, error);
+    if (error instanceof LlmError) {
+        throw error;
+    }
     if (error.message && error.message.toLowerCase().includes('quota')) {
         throw new Error('API quota exceeded. Please select a different model and retry.');
     }
@@ -116,8 +96,18 @@ const saveCoordinatesCache = async () => {
     await setSettings('cityCoordinates', cityCoordinatesCache);
 };
 
+const geocodeSchema = {
+    type: 'object',
+    properties: {
+        lat: { type: 'number', description: 'Latitude' },
+        lng: { type: 'number', description: 'Longitude' },
+        correctedName: { type: 'string', description: 'Official city name' },
+    },
+    required: ['lat', 'lng', 'correctedName'],
+    additionalProperties: false,
+};
+
 const fetchCoordinatesForCity = async (cityName: string, context?: string): Promise<{ lat: number; lng: number; correctedName: string } | null> => {
-    const aiModel = useCaseStore.getState().aiModel;
     let prompt;
 
     if (context) {
@@ -135,22 +125,7 @@ const fetchCoordinatesForCity = async (cityName: string, context?: string): Prom
     }
 
     try {
-        const response = await (await getClient()).models.generateContent({
-            model: aiModel,
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        lat: { type: Type.NUMBER, description: "Latitude" },
-                        lng: { type: Type.NUMBER, description: "Longitude" },
-                        correctedName: { type: Type.STRING, description: "Official city name" },
-                    },
-                    required: ["lat", "lng", "correctedName"],
-                },
-            },
-        });
+        const response = await runPhase('geocode', { prompt, schema: geocodeSchema });
 
         if (!response.text) {
             console.warn(`Geocoding for "${cityName}" returned no text.`);
@@ -223,27 +198,12 @@ const jaccardSimilarity = (set1: Set<string>, set2: Set<string>): number => {
     return intersection.size / union.size;
 };
 
-const processProvenance = (cases: (Partial<CaseData> | CaseData)[], response: GenerateContentResponse): (Partial<CaseData> | CaseData | null)[] => {
-    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    if (!chunks || !Array.isArray(chunks) || chunks.length === 0) {
-        console.warn("[Provenance] No grounding chunks found. Allowing cases to pass but quality may be affected.");
+const processProvenance = (cases: (Partial<CaseData> | CaseData)[], sources: SourceRef[]): (Partial<CaseData> | CaseData | null)[] => {
+    if (sources.length === 0) {
+        console.warn("[Provenance] No consulted sources reported. Allowing cases to pass but quality may be affected.");
         return cases.map(c => c ? { ...c, provenanceWarning: true } : null);
     }
-    const groundingSources = chunks
-        .map(chunk => {
-            try {
-                const web = chunk.web;
-                if (web && web.uri && web.title) {
-                    return { uri: web.uri as string, title: web.title as string, tokens: getTokens(web.title as string) };
-                }
-            } catch (e) { /* Ignore parsing errors */ }
-            return null;
-        }).filter((source): source is NonNullable<typeof source> => source !== null);
-
-    if (groundingSources.length === 0) {
-        console.warn("[Provenance] Grounding chunks were present but empty. Allowing cases to pass but quality may be affected.");
-        return cases.map(c => c ? { ...c, provenanceWarning: true } : null);
-    }
+    const groundingSources = sources.map(s => ({ ...s, tokens: getTokens(s.title) }));
 
     return cases.map(c => {
         if (!c?.provenance || !Array.isArray(c.provenance) || c.provenance.length === 0) {
@@ -360,11 +320,14 @@ export const generateCaseData = async (
     irrelevantExamples: CaseData[]
 ): Promise<CaseData[]> => {
   try {
-    const { aiModel } = useCaseStore.getState();
     const activePromptEntry = await getActivePrompt();
     let promptToUse = activePromptEntry ? activePromptEntry.prompt : defaultPrompt;
 
+    // Senza la data di oggi il modello non sa che cosa significhi "ultimi 3
+    // giorni" e giudica la recenza sulla propria data di addestramento.
     const profileSection = `
+**DATA ODIERNA:** ${new Date().toISOString().slice(0, 10)}
+
 **PROFILO DI RILEVANZA (Appreso dal feedback dell'analista):**
 *   **MASSIMA PRIORITÀ (Segnalato dall'analista - Peso 4):**
 ${summarizeCasesForPrompt(analystReportedExamples)}
@@ -383,13 +346,7 @@ ${JSON.stringify(existingCases.map(c => ({ caseID: c.caseID, title: c.summary.ti
     
     promptToUse += profileSection;
 
-    const response = await (await getClient()).models.generateContent({
-        model: aiModel,
-        contents: promptToUse,
-        config: {
-            tools: [{ googleSearch: {} }],
-        },
-    });
+    const response = await runPhase('search', { prompt: promptToUse, webSearch: true });
 
     if (!response.text) {
         throw new Error("The AI model returned an empty response during case generation.");
@@ -418,7 +375,7 @@ ${JSON.stringify(existingCases.map(c => ({ caseID: c.caseID, title: c.summary.ti
             throw new Error("Failed to parse intelligence data from AI model: unexpected format.");
         }
         
-        const verifiedCasesWithNulls = processProvenance(rawCases, response);
+        const verifiedCasesWithNulls = processProvenance(rawCases, response.sources);
         const newCases = verifiedCasesWithNulls.filter((c): c is Partial<CaseData> => c !== null);
 
         const processedCasesPromises = newCases
@@ -470,7 +427,9 @@ ${JSON.stringify(existingCases.map(c => ({ caseID: c.caseID, title: c.summary.ti
         
             return {
               ...c,
-              caseID: c.caseID || `${dateStr}-${crimeCode}-${progressiveId}`,
+              // L'ID lo assegna sempre il contatore locale: quello proposto dal
+              // modello non e' unico tra una rassegna e l'altra.
+              caseID: `${dateStr}-${crimeCode}-${progressiveId}`,
               initialReportTimestamp: c.initialReportTimestamp || new Date().toISOString(),
               lastUpdateTimestamp: c.lastUpdateTimestamp || new Date().toISOString(),
               status: c.status || 'Active',
@@ -498,7 +457,6 @@ ${JSON.stringify(existingCases.map(c => ({ caseID: c.caseID, title: c.summary.ti
 
 export const analyzeSingleUrl = async (url: string, existingCases: CaseData[]): Promise<Partial<CaseData>> => {
   try {
-    const { aiModel } = useCaseStore.getState();
     const prompt = `
         Sei un analista di intelligence. Il tuo compito è analizzare il contenuto di un singolo URL fornito e estrarre le informazioni in un oggetto JSON strutturato.
 
@@ -535,13 +493,7 @@ export const analyzeSingleUrl = async (url: string, existingCases: CaseData[]): 
         \`\`\`
     `;
 
-    const response = await (await getClient()).models.generateContent({
-        model: aiModel,
-        contents: prompt,
-        config: {
-            tools: [{ googleSearch: {} }],
-        },
-    });
+    const response = await runPhase('analyzeUrl', { prompt, webSearch: true });
 
     if (!response.text) {
         throw new Error("L'analisi dell'URL non ha prodotto alcun risultato.");
@@ -553,7 +505,7 @@ export const analyzeSingleUrl = async (url: string, existingCases: CaseData[]): 
         throw new Error(result.error);
     }
     
-    const [fixedResult] = processProvenance([result], response);
+    const [fixedResult] = processProvenance([result], response.sources);
     if (!fixedResult) {
         throw new Error("L'analisi dell'URL non ha prodotto un caso con una fonte di origine verificabile.");
     }
@@ -610,7 +562,6 @@ export const analyzeSingleUrl = async (url: string, existingCases: CaseData[]): 
 
 export const updateCaseDetails = async (caseData: CaseData): Promise<Partial<CaseData>> => {
   try {
-    const { aiModel } = useCaseStore.getState();
     const prompt = `
         Sei un analista di intelligence. Ti fornisco i dati di un caso esistente che potrebbe essere incompleto.
         Il tuo compito è eseguire una ricerca web per AGGIORNARE e COMPLETARE questo caso.
@@ -643,13 +594,7 @@ export const updateCaseDetails = async (caseData: CaseData): Promise<Partial<Cas
         \`\`\`
     `;
 
-    const response = await (await getClient()).models.generateContent({
-        model: aiModel,
-        contents: prompt,
-        config: {
-            tools: [{ googleSearch: {} }],
-        },
-    });
+    const response = await runPhase('updateCase', { prompt, webSearch: true });
 
     if (!response.text) {
         console.warn(`Update check for ${caseData.caseID} returned no new information.`);
@@ -663,7 +608,7 @@ export const updateCaseDetails = async (caseData: CaseData): Promise<Partial<Cas
     }
     
     const parsedChanges = JSON.parse(cleanedJsonText);
-    const [fixedChanges] = processProvenance([parsedChanges], response);
+    const [fixedChanges] = processProvenance([parsedChanges], response.sources);
 
     if (!fixedChanges) {
         console.warn(`Update for case ${caseData.caseID} discarded because provenance could not be verified.`);
@@ -809,60 +754,52 @@ CASE_DATA_PLACEHOLDER
 \`\`\`
 `;
 
+const entityListsSchema = {
+    type: 'object',
+    properties: {
+        individuals: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string' },
+                    age: { type: 'number' },
+                    legalAction: { type: 'string' },
+                    role: { type: 'string' },
+                    dateOfBirth: { type: 'string' },
+                },
+                required: ['name', 'legalAction'],
+            },
+        },
+        companies: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string' },
+                    legalAction: { type: 'string' },
+                },
+                required: ['name', 'legalAction'],
+            },
+        },
+    },
+    required: ['individuals', 'companies'],
+};
+
+const deepDiveSchema = {
+    type: 'object',
+    properties: {
+        reportContent: { type: 'string', description: 'The full intelligence report formatted in Markdown.' },
+        updatedEntities: entityListsSchema,
+    },
+    required: ['reportContent', 'updatedEntities'],
+};
+
 export const generateDeepDiveReport = async (caseData: CaseData): Promise<DeepDiveReport> => {
   try {
-    const { aiModel } = useCaseStore.getState();
     const filledPrompt = deepDiveReportPrompt.replace('CASE_DATA_PLACEHOLDER', JSON.stringify(caseData, null, 2));
 
-    const response = await (await getClient()).models.generateContent({
-        model: aiModel,
-        contents: filledPrompt,
-        config: {
-            tools: [{ googleSearch: {} }],
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    reportContent: { 
-                        type: Type.STRING, 
-                        description: "The full intelligence report formatted in Markdown." 
-                    },
-                    updatedEntities: {
-                        type: Type.OBJECT,
-                        properties: {
-                            individuals: {
-                                type: Type.ARRAY,
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: {
-                                        name: { type: Type.STRING },
-                                        age: { type: Type.NUMBER },
-                                        legalAction: { type: Type.STRING },
-                                        role: { type: Type.STRING },
-                                        dateOfBirth: { type: Type.STRING }
-                                    },
-                                    required: ['name', 'legalAction']
-                                }
-                            },
-                            companies: {
-                                type: Type.ARRAY,
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: {
-                                        name: { type: Type.STRING },
-                                        legalAction: { type: Type.STRING }
-                                    },
-                                    required: ['name', 'legalAction']
-                                }
-                            }
-                        },
-                        required: ['individuals', 'companies']
-                    }
-                },
-                required: ['reportContent', 'updatedEntities']
-            }
-        },
-    });
+    const response = await runPhase('deepDive', { prompt: filledPrompt, webSearch: true, schema: deepDiveSchema });
 
     if (!response.text) {
         throw new Error("The AI model returned an empty response while generating the report.");
@@ -891,7 +828,6 @@ export const reviseSearchPrompt = async (
   currentPrompt: string
 ): Promise<string> => {
   try {
-    const { aiModel } = useCaseStore.getState();
     const prompt = `
       Sei un'IA stratega specializzata in OSINT. Il tuo compito è ottimizzare un prompt di ricerca per un altro modello IA (Chronicle), basandoti sul feedback di un analista umano.
 
@@ -920,10 +856,7 @@ export const reviseSearchPrompt = async (
       4.  **OUTPUT:** Restituisci **SOLO ED ESCLUSIVAMENTE** il testo completo del nuovo prompt ottimizzato, senza alcun commento o testo aggiuntivo.
     `;
 
-    const response = await (await getClient()).models.generateContent({
-        model: aiModel,
-        contents: prompt,
-    });
+    const response = await runPhase('revisePrompt', { prompt });
     
     if (!response.text) {
         console.warn("Prompt revision returned no result. Keeping the current prompt.");
@@ -938,7 +871,6 @@ export const reviseSearchPrompt = async (
 
 export const translateReport = async (reportContent: string): Promise<string> => {
   try {
-    const { aiModel } = useCaseStore.getState();
     const prompt = `
         Translate the following intelligence report into professional, formal English suitable for law enforcement agencies.
         It is critical that you preserve the exact Markdown formatting of the original text (headings, lists, bold text, etc.).
@@ -950,10 +882,7 @@ export const translateReport = async (reportContent: string): Promise<string> =>
         ---
     `;
 
-    const response = await (await getClient()).models.generateContent({
-        model: aiModel,
-        contents: prompt,
-    });
+    const response = await runPhase('translate', { prompt });
 
     if (!response.text) {
         throw new Error("Translation failed: The AI model returned an empty response.");

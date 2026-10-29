@@ -1,6 +1,6 @@
 # Acta Diurna
 
-![Versione](https://img.shields.io/badge/version-0.2.1-blue.svg)
+![Versione](https://img.shields.io/badge/version-0.3.0-blue.svg)
 ![Licenza](https://img.shields.io/badge/license-MIT-green.svg)
 
 **Dashboard OSINT per monitorare e analizzare le notizie sulle operazioni delle forze dell'ordine in Italia.**
@@ -24,17 +24,18 @@ giornalistiche accessibili a chiunque. È pensata per analisti, giornalisti e
 ricercatori.
 
 L'applicazione gira interamente nel browser. I dati restano sul computer di chi
-la usa, in IndexedDB, e non vengono trasmessi ad alcun server se non a Google
-Gemini per l'analisi.
+la usa, in IndexedDB, e non vengono trasmessi ad alcun server se non al
+fornitore di IA scelto per l'analisi: Google Gemini oppure Anthropic Claude.
 
 ## Funzionalità
 
-- **Scoperta automatica dei casi.** Un agente basato su Gemini con grounding di
-  Google Search setaccia le fonti giornalistiche italiane, filtra il rumore e
+- **Scoperta automatica dei casi.** Un agente con ricerca web (Gemini con
+  grounding di Google Search, oppure Claude con gli strumenti di ricerca e
+  lettura web) setaccia le fonti giornalistiche italiane, filtra il rumore e
   propone solo i casi rilevanti.
 
 - **Verifica della provenienza.** Ogni fonte citata dall'IA viene confrontata
-  con i metadati di grounding di Google Search: URL e titoli vengono corretti e
+  con le pagine che il modello ha davvero consultato: URL e titoli vengono corretti e
   le fonti inventate scartate. I casi le cui fonti non superano la verifica
   restano visibili ma contrassegnati da un avviso.
 
@@ -63,8 +64,11 @@ Gemini per l'analisi.
   dell'IA. La cronologia dei prompt è ispezionabile, confrontabile e
   ripristinabile.
 
-- **Scelta del modello.** Il modello Gemini è selezionabile, così un errore di
-  quota su un modello non blocca il lavoro.
+- **Scelta del fornitore e del modello.** Si sceglie tra Gemini, con un modello
+  unico, e Claude, che usa il modello più adatto per ogni fase: Haiku per la
+  geocodifica, Sonnet per rassegna, analisi di un URL, aggiornamento e
+  traduzione, Opus per il report di approfondimento e la revisione del profilo
+  di ricerca. Un errore di quota su un fornitore non blocca il lavoro.
 
 - **Import/export e fusione.** L'intero archivio si esporta in JSON. In fase di
   importazione si può sovrascrivere l'archivio locale oppure *integrarlo*,
@@ -82,10 +86,15 @@ Gemini per l'analisi.
 ## Requisiti
 
 - **Node.js 20** o successivo
-- Una **chiave API di Google Gemini** ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)),
-  da inserire dall'interfaccia al primo avvio. Il piano gratuito è sufficiente
-  per provare l'applicazione. Senza chiave l'applicazione parte lo stesso e
-  l'archivio resta consultabile, ma non può analizzare nulla.
+- Una chiave API del fornitore scelto, da inserire dall'interfaccia al primo
+  avvio:
+  - **Google Gemini** ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)):
+    il piano gratuito è sufficiente per provare l'applicazione;
+  - **Anthropic Claude** ([platform.claude.com](https://platform.claude.com/settings/keys)):
+    a consumo, con la ricerca web abilitata per l'organizzazione.
+
+  Senza chiave l'applicazione parte lo stesso e l'archivio resta consultabile,
+  ma non può analizzare nulla.
 - Un browser recente con supporto a IndexedDB
 
 ## Installazione
@@ -107,7 +116,9 @@ chiede la chiave API: si incolla nella finestra che compare, e viene salvata nel
 database dell'applicazione su questo browser. Il pulsante **CHIAVE API**
 nell'intestazione la reimposta in qualsiasi momento.
 
-L'interfaccia mostra soltanto se una chiave è presente, mai il suo valore.
+Ogni fornitore ha la sua chiave: la finestra mostra quella del fornitore scelto
+in **MODELLO AI**. L'interfaccia mostra soltanto se una chiave è presente, mai
+il suo valore.
 
 Per una build di produzione:
 
@@ -118,7 +129,8 @@ npm run preview   # serve dist/ in locale per verifica
 
 ### La chiave a build time è facoltativa
 
-Chi compila può fornire una chiave in `.env`, copiando `.env.example`. In quel
+Chi compila può fornire una chiave in `.env` (`GEMINI_API_KEY`,
+`ANTHROPIC_API_KEY`), copiando `.env.example`. In quel
 caso la chiave fa da **override**: vince su quella inserita dall'interfaccia, e
 l'interfaccia non permette di cambiarla.
 
@@ -129,6 +141,8 @@ l'interfaccia non permette di cambiarla.
 
 La chiave inserita dall'interfaccia resta nel database del browser. È molto
 meglio del bundle, ma non è protetta da chi ha accesso al profilo del browser.
+Con Claude il browser chiama direttamente l'API di Anthropic: è un'altra ragione
+per usare l'applicazione solo in locale, senza esporla in rete.
 
 ## Come funziona
 
@@ -136,7 +150,7 @@ meglio del bundle, ma non è protetta da chi ha accesso al profilo del browser.
         fonti giornalistiche italiane
                     │
                     ▼
-      Gemini + grounding Google Search      ← scoperta e strutturazione
+   Gemini o Claude + ricerca web            ← scoperta e strutturazione
                     │
                     ▼
         verifica della provenienza          ← scarta le fonti non verificabili
@@ -155,7 +169,7 @@ meglio del bundle, ma non è protetta da chi ha accesso al profilo del browser.
 ## Tecnologie
 
 React 19 · TypeScript · Vite · Tailwind CSS · Zustand · Dexie.js (IndexedDB) ·
-Leaflet · Google Gemini API
+Leaflet · Google Gemini API · Anthropic Claude API
 
 Tutte le dipendenze sono installate come pacchetti npm: l'applicazione non
 carica codice da CDN esterni. L'unica risorsa remota a runtime è il servizio di
@@ -180,8 +194,8 @@ I valori dell'interfaccia derivano da due ricostruzioni pubbliche, entrambe MIT:
 
 ## Limiti noti
 
-- **La scoperta dei casi dipende interamente dal grounding di Google Search di
-  Gemini.** Non esiste una pipeline di raccolta autonoma: senza quel servizio
+- **La scoperta dei casi dipende interamente dalla ricerca web del fornitore di
+  IA.** Non esiste una pipeline di raccolta autonoma: senza quel servizio
   l'applicazione può solo analizzare contenuti forniti a mano.
 - **L'IA può sbagliare.** La verifica della provenienza elimina le fonti
   inventate, ma non garantisce che l'interpretazione dei fatti sia corretta.

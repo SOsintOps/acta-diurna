@@ -5,7 +5,7 @@ import PulsingTriangle from './icons/PulsingTriangle';
 import StarIcon from './icons/StarIcon';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { translateReport } from '../services/geminiService';
+import { translateReport } from '../services/aiService';
 import WarningIcon from './icons/WarningIcon';
 
 interface CaseDetailProps {

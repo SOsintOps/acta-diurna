@@ -11,8 +11,8 @@ import { crimeCategoryShortCodes } from './utils/crimeCategorizer';
 import RevisionProgressModal from './components/RevisionProgressModal';
 import ArchiveOptionsModal from './components/ArchiveOptionsModal';
 import ModelSelectorModal from './components/ModelSelectorModal';
-import ApiKeyModal from './components/ApiKeyModal';
-import { hasApiKey } from './services/apiKey';
+import SettingsModal from './components/SettingsModal';
+import { hasCredentials } from './services/apiKey';
 import PromptHistoryModal from './components/PromptHistoryModal';
 import DocsModal from './components/DocsModal';
 import ImportOptionsModal from './components/ImportOptionsModal';
@@ -205,7 +205,7 @@ const App: React.FC = () => {
 
         // Senza chiave non si chiama il modello: si chiede la chiave e basta.
         // L'archivio gia' raccolto resta consultabile in ogni caso.
-        const keyConfigured = await hasApiKey(useCaseStore.getState().aiProvider);
+        const keyConfigured = await hasCredentials(useCaseStore.getState().aiProvider);
         if (!keyConfigured) {
             setIsApiKeyModalOpen(true);
         }
@@ -652,7 +652,7 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
        <ModelSelectorModal />
-       <ApiKeyModal />
+       <SettingsModal />
        {isRevisingPrompt && <RevisionProgressModal />}
        {caseToArchive && (
         <ArchiveOptionsModal 

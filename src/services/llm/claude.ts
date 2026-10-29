@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { getApiKey } from '../apiKey';
+import { getApiKey, isEnvOverrideActive } from '../apiKey';
+import { federatedAccessToken, getFederationState } from './federation';
 import { LlmError, type Phase, type PhaseRequest, type PhaseResult, type SourceRef } from './types';
 
 type Effort = 'low' | 'medium' | 'high';
@@ -37,20 +38,39 @@ const MAX_CONTINUATIONS = 5;
 const supportsServerFallback = (model: string) => !model.startsWith('claude-haiku');
 
 let client: Anthropic | null = null;
-let clientKey: string | null = null;
+// Che cosa autentica il client attuale: la chiave, o il segnaposto della
+// federazione. Se cambia, il client si ricostruisce.
+let clientAuth: string | null = null;
 
+const FEDERATION = 'federation';
+
+/**
+ * Precedenza: chiave da .env a build-time, poi federazione d'identita', poi
+ * chiave inserita dalle impostazioni.
+ */
 const getClient = async (): Promise<Anthropic> => {
-    const key = await getApiKey('claude');
-    if (!key) {
-        throw new LlmError('Chiave API Claude non configurata. Inseriscila dal pannello di amministrazione.');
+    let auth: string | null = null;
+    if (!isEnvOverrideActive('claude')) {
+        const federation = await getFederationState();
+        if (federation.state === 'on') {
+            auth = FEDERATION;
+        } else if (federation.state === 'error') {
+            throw new LlmError(`Federazione Claude configurata ma non funzionante: ${federation.message}`);
+        }
     }
-    if (!client || clientKey !== key) {
+    auth ??= await getApiKey('claude');
+    if (!auth) {
+        throw new LlmError('Credenziali Claude assenti. Inserisci la chiave dalle impostazioni o configura la federazione.');
+    }
+    if (!client || clientAuth !== auth) {
         // L'applicazione non ha ancora un backend: la chiamata parte dal
-        // browser, con la chiave nel browser. E' il rischio S-1 di
-        // RETROFIT_AUDIT, e il motivo per cui l'applicazione non va esposta
-        // in rete.
-        client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
-        clientKey = key;
+        // browser. Con la chiave, la chiave sta nel browser: e' il rischio S-1
+        // di RETROFIT_AUDIT, e il motivo per cui l'applicazione non va esposta
+        // in rete. Con la federazione nel browser arriva solo un token breve.
+        client = auth === FEDERATION
+            ? new Anthropic({ credentials: federatedAccessToken, dangerouslyAllowBrowser: true })
+            : new Anthropic({ apiKey: auth, dangerouslyAllowBrowser: true });
+        clientAuth = auth;
     }
     return client;
 };
@@ -143,7 +163,7 @@ export const runClaude = async (phase: Phase, request: PhaseRequest): Promise<Ph
     } catch (error) {
         if (error instanceof LlmError) throw error;
         if (error instanceof Anthropic.AuthenticationError) {
-            throw new LlmError('Chiave API Claude non valida.');
+            throw new LlmError('Credenziali Claude non valide o scadute.');
         }
         if (error instanceof Anthropic.RateLimitError) {
             throw new LlmError('Limite di richieste Claude raggiunto (quota). Riprova tra poco.');

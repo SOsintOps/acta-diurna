@@ -3,7 +3,7 @@ import React from 'react';
 import { useCaseStore } from '../store/caseStore';
 import { CLAUDE_PHASES } from '../services/llm/claude';
 import type { AiProvider } from '../services/llm';
-import { hasApiKey } from '../services/apiKey';
+import { hasCredentials } from '../services/apiKey';
 import PulsingTriangle from './icons/PulsingTriangle';
 
 // Ogni voce sceglie un fornitore. Gemini usa un modello unico per tutte le
@@ -28,7 +28,7 @@ const ModelSelectorModal: React.FC = () => {
         setIsModelSelectorOpen(false);
         // Un fornitore appena scelto senza chiave non puo' rispondere: si chiede
         // subito la chiave invece di fallire alla prima rassegna.
-        if (!(await hasApiKey(model.provider))) {
+        if (!(await hasCredentials(model.provider))) {
             setIsApiKeyModalOpen(true);
         }
     };

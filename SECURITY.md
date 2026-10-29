@@ -14,6 +14,10 @@ Acta Diurna è un'applicazione che gira **solo nel browser**, senza backend.
   nel database IndexedDB del profilo; quella fornita in `.env` viene compilata
   in chiaro nel bundle. Con Claude, il browser chiama direttamente l'API di
   Anthropic.
+- **Con la Workload Identity Federation di Claude** nel browser non c'è alcuna
+  chiave lunga: il server di Vite scambia il JWT dell'identity provider e
+  consegna alla pagina solo un token di breve durata. È il modo consigliato
+  per usare Claude.
 - **Per questo l'applicazione va usata in locale** (`npm run dev` o
   `npm run preview`) e **non va pubblicata né esposta in rete**. Una build fatta
   con una chiave in `.env` non va distribuita.

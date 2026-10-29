@@ -118,7 +118,7 @@ const Dashboard: React.FC<DashboardProps> = ({ appVersion, onSelectCase, onCheck
               onClick={onOpenApiKey}
               className={`sam-action-compact font-mono text-sm px-3 py-1 flex-shrink-0 ${secondaryButtonThemeClass}`}
             >
-              CHIAVE API
+              IMPOSTAZIONI
             </button>
             <HelpMenu onSelectDoc={onOpenDocs} />
             <ThemeToggleButton />

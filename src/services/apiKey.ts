@@ -1,5 +1,6 @@
 import { getSettings, setSettings } from '../db';
 import type { AiProvider } from './llm/types';
+import { getFederationState } from './llm/federation';
 
 // Righe della tabella `settings` del database applicativo, una per fornitore.
 // `apiKey` e' la riga storica di Gemini: rinominarla renderebbe irraggiungibili
@@ -49,6 +50,13 @@ export const getApiKey = async (provider: AiProvider): Promise<string | null> =>
  * L'interfaccia espone solo la presenza della chiave, mai il valore.
  */
 export const hasApiKey = async (provider: AiProvider): Promise<boolean> => (await getApiKey(provider)) !== null;
+
+/**
+ * Il fornitore puo' rispondere: ha una chiave o, per Claude, la federazione
+ * d'identita' attiva.
+ */
+export const hasCredentials = async (provider: AiProvider): Promise<boolean> =>
+    (await hasApiKey(provider)) || (provider === 'claude' && (await getFederationState()).state === 'on');
 
 export const setApiKey = async (provider: AiProvider, value: string): Promise<void> => {
     if (isEnvOverrideActive(provider)) {

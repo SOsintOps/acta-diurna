@@ -115,12 +115,12 @@ npm run dev
 
 L'applicazione sarà disponibile su `http://localhost:5173`. Al primo avvio
 chiede la chiave API: si incolla nella finestra che compare, e viene salvata nel
-database dell'applicazione su questo browser. Il pulsante **CHIAVE API**
+database dell'applicazione su questo browser. Il pulsante **IMPOSTAZIONI**
 nell'intestazione la reimposta in qualsiasi momento.
 
-Ogni fornitore ha la sua chiave: la finestra mostra quella del fornitore scelto
-in **MODELLO AI**. L'interfaccia mostra soltanto se una chiave è presente, mai
-il suo valore.
+Le impostazioni raccolgono le chiavi di tutti i fornitori, ciascuna con il suo
+stato; il fornitore in uso si cambia con **CAMBIA AI**. L'interfaccia mostra
+soltanto se una chiave è presente, mai il suo valore.
 
 Per una build di produzione:
 
@@ -145,6 +145,29 @@ La chiave inserita dall'interfaccia resta nel database del browser. È molto
 meglio del bundle, ma non è protetta da chi ha accesso al profilo del browser.
 Con Claude il browser chiama direttamente l'API di Anthropic: è un'altra ragione
 per usare l'applicazione solo in locale, senza esporla in rete.
+
+### Claude senza chiave: Workload Identity Federation
+
+Al posto della chiave, Claude accetta la
+[Workload Identity Federation](https://platform.claude.com/docs/en/manage-claude/workload-identity-federation):
+il JWT di un identity provider già fidato (Entra ID, Okta, Google Cloud, AWS,
+Kubernetes, GitHub Actions...) si scambia con un token Claude di breve durata.
+
+1. Nella Claude Console crea un *service account*, un *federation issuer* per il
+   tuo identity provider e una *federation rule* con scope `workspace:inference`.
+2. In `.env` compila le variabili `ANTHROPIC_FEDERATION_RULE_ID`,
+   `ANTHROPIC_ORGANIZATION_ID`, `ANTHROPIC_SERVICE_ACCOUNT_ID` e una tra
+   `ANTHROPIC_IDENTITY_TOKEN_FILE` e `ANTHROPIC_IDENTITY_TOKEN` (vedi
+   `.env.example`). Lascia vuota `ANTHROPIC_API_KEY`.
+3. Avvia con `npm run dev` o `npm run preview`. In **IMPOSTAZIONI** la voce
+   **FEDERAZIONE** passa ad **ATTIVA**.
+
+Lo scambio lo fa il server di Vite: l'endpoint di Anthropic non accetta chiamate
+dal browser, e così il JWT e gli identificativi restano sul server. Al browser
+arriva solo il token breve, che l'applicazione rinnova da sola alla scadenza.
+La federazione ha la precedenza sulla chiave salvata dall'interfaccia, non su
+quella compilata da `.env`. Funziona solo con l'applicazione servita da Vite,
+non con una build statica copiata su un altro server.
 
 ## Come funziona
 

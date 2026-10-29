@@ -10,9 +10,9 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
 **Claude diventa il fornitore predefinito, con un modello per fase**
 
 L'analisi passa ad Anthropic Claude, che usa il modello più adatto a ciascuna
-fase. Google Gemini resta selezionabile nella finestra **MODELLO AI**, con un
-modello unico. Al primo avvio dopo l'aggiornamento l'applicazione chiede la
-chiave API di Claude:
+fase. Google Gemini resta selezionabile con **CAMBIA AI**, con un modello
+unico. Al primo avvio dopo l'aggiornamento l'applicazione chiede la chiave API
+di Claude:
 
 | Fase | Modello |
 |---|---|
@@ -23,7 +23,19 @@ chiave API di Claude:
 
 Con Claude la ricerca e la lettura degli articoli usano gli strumenti web di
 Anthropic, e la verifica della provenienza lavora sugli URL delle pagine
-effettivamente consultate. Ogni fornitore ha la sua chiave API.
+effettivamente consultate.
+
+**Pagina delle impostazioni.** Il pulsante **CHIAVE API** diventa
+**IMPOSTAZIONI**: raccoglie le chiavi di tutti i fornitori, ciascuna con il suo
+stato, il campo per inserirla e la revoca, e indica quale fornitore è in uso.
+Si può preparare la chiave di un fornitore prima di passarci.
+
+**Claude senza chiave, con la federazione d'identità.** In alternativa alla
+chiave, Claude accetta la Workload Identity Federation: il JWT di un identity
+provider già fidato si scambia con un token di breve durata. Lo scambio lo fa il
+server dell'applicazione (`npm run dev` o `npm run preview`), configurato da
+`.env`; nel browser arriva solo il token breve. Le impostazioni mostrano se la
+federazione è attiva. Istruzioni nel README.
 
 **Correzioni**
 

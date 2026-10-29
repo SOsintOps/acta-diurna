@@ -2,6 +2,7 @@ import path from 'path';
 import { createRequire } from 'module';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { claudeFederation } from './server/claudeFederation';
 
 // Unica fonte di verita' per la versione: package.json.
 const { version } = createRequire(import.meta.url)('./package.json');
@@ -9,7 +10,9 @@ const { version } = createRequire(import.meta.url)('./package.json');
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    plugins: [react()],
+    // La federazione d'identita' di Claude vive sul server di Vite (dev e
+    // preview): vedi server/claudeFederation.ts.
+    plugins: [react(), claudeFederation(env)],
     define: {
       // Chiave a build-time FACOLTATIVA: quando c'e' fa da override e vince su
       // quella inserita dall'admin, quando manca l'applicazione parte lo stesso

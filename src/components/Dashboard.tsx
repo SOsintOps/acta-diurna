@@ -179,14 +179,14 @@ const Dashboard: React.FC<DashboardProps> = ({ appVersion, onSelectCase, onCheck
         </button>
         <button
           onClick={async () => scarica(await esportaFtm(cases), `acta-diurna-entita-${new Date().toISOString().slice(0, 10)}.ftm`)}
-          title="Persone, società e casi in FollowTheMoney, nel formato comune con Iudex e Praeco"
+          title="Persone, società e casi in FollowTheMoney, nel formato comune con Iudex"
           className={`font-mono text-sm px-3 py-1 border transition-colors duration-200 ${dbButtonThemeClass}`}
         >
           ESPORTA FTM
         </button>
         <button
           onClick={async () => scarica(await esportaPacchetto(cases), `acta-diurna-pacchetto-${new Date().toISOString().slice(0, 10)}.jsonl`)}
-          title="Pacchetto JSONL di scambio con Iudex e Praeco"
+          title="Pacchetto JSONL di scambio con Iudex"
           className={`font-mono text-sm px-3 py-1 border transition-colors duration-200 ${dbButtonThemeClass}`}
         >
           ESPORTA JSONL

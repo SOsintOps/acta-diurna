@@ -105,8 +105,8 @@ e non ha legami con forze dell'ordine o enti pubblici.
 ## 5. Casi ed entità
 
 Le persone e le società seguono il **formato comune con
-[Iudex](https://github.com/SOsintOps/Iudex)** e Praeco: stessi campi e stessi identificativi.
-Così i dati si scambiano tra le tre applicazioni e si incrociano con le sentenze della
+[Iudex](https://github.com/SOsintOps/Iudex)**: stessi campi e stessi identificativi.
+Così i dati si scambiano tra le applicazioni e si incrociano con le sentenze della
 Cassazione.
 
 | Requisito | Descrizione |
@@ -171,7 +171,7 @@ Cassazione.
 |---|---|
 | R9.1 | **ESPORTA DB / IMPORTA DB**: archivio completo in JSON. All'importazione l'archivio locale si sovrascrive o si integra, fondendo i casi di più analisti. I backup delle versioni precedenti si migrano da soli. |
 | R9.2 | **ESPORTA FTM**: persone, società, casi (come `Event`), citazioni e legami in FollowTheMoney NDJSON, apribile in Aleph. L'id di persone e società è il loro uid. |
-| R9.3 | **ESPORTA JSONL**: pacchetto di scambio con Iudex e Praeco. Prima riga `{"record":"pacchetto","app":"acta-diurna","formato":1}`, poi un record per caso, persona, società, citazione, legame e riscontro. |
+| R9.3 | **ESPORTA JSONL**: pacchetto di scambio con Iudex. Prima riga `{"record":"pacchetto","app":"acta-diurna","formato":1}`, poi un record per caso, persona, società, citazione, legame e riscontro. |
 
 **Costi:**
 

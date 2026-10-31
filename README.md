@@ -80,9 +80,9 @@ Google Gemini.
   incrociano con le sentenze della Cassazione. Codice fiscale e partita IVA si
   salvano solo se scritti nell'articolo e validi; il sesso solo se dichiarato,
   mai dedotto dal nome. Si esportano in FollowTheMoney (`.ftm`, apribile in
-  Aleph) e in un pacchetto JSONL. Acta Diurna, Iudex e Praeco sono tre applicazioni
-  autonome: collaborano e si scambiano i dati, ma ognuna funziona da sola e nessuna
-  richiede le altre.
+  Aleph) e in un pacchetto JSONL. Acta Diurna e Iudex sono applicazioni autonome:
+  collaborano e si scambiano i dati, ma ognuna funziona da sola e nessuna richiede
+  l'altra.
 
 - **Ricerca nelle sentenze con Iudex** (facoltativa, da attivare nelle impostazioni).
   Con Iudex acceso sullo stesso computer, ogni persona e società di un caso si cerca nelle

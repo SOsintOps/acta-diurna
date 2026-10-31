@@ -161,6 +161,7 @@ Cassazione.
 | R8.6 | Un riscontro è un **candidato da verificare**: molti nomi nelle sentenze sono oscurati e lo stesso nome può appartenere a persone diverse. Nessun risultato non prova nulla. |
 | R8.7 | **Token di Iudex**: lo legge e lo usa solo il server locale di Acta Diurna, mai il browser. Il ponte rifiuta le richieste da altre origini e manda alla Corte una ricerca alla volta. |
 | R8.8 | La ricerca in Iudex **non usa Claude**. Ogni ricerca sulla Corte è una richiesta al server di Italgiure. |
+| R8.9 | **VPN**: il server della Corte non risponde alle connessioni che arrivano dagli indirizzi di uscita delle VPN commerciali (la richiesta va in scadenza senza risposta). Chi usa una VPN esclude dal tunnel (*split tunneling*) l'indirizzo IP `81.126.56.168` (`www.italgiure.giustizia.it`): il resto della navigazione resta protetto. La ricerca nell'archivio locale non ne ha bisogno. |
 
 ## 9. Esportazione, costi, sicurezza
 

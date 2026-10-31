@@ -17,6 +17,7 @@ Per il flusso di lavoro operativo c'è la [Guida Operativa all'Analisi](help.md)
 * [Posso perdere i miei dati?](#posso-perdere-i-miei-dati)
 * [Ho ricevuto un errore di "quota superata". Cosa faccio?](#ho-ricevuto-un-errore-di-quota-superata-cosa-faccio)
 * [Perché una città non compariva sulla mappa?](#perché-una-città-non-compariva-sulla-mappa)
+* [CERCA SULLA CORTE non risponde: colpa della VPN?](#cerca-sulla-corte-non-risponde-colpa-della-vpn)
 * [Esistono altri progetti collegati ad Acta Diurna?](#esistono-altri-progetti-collegati-ad-acta-diurna)
 
 ## Il prodotto
@@ -170,13 +171,19 @@ In passato, il sistema poteva omettere una città se il suo nome era scritto in 
 
 Questo processo non solo trova le coordinate, ma **corregge anche il nome della città** con quello ufficiale, garantendo la massima accuratezza e completezza dei dati geografici sulla mappa.
 
+### CERCA SULLA CORTE non risponde: colpa della VPN?
+
+Quasi sempre sì. Il server della Corte di Cassazione non risponde alle connessioni che arrivano dagli indirizzi di uscita delle VPN commerciali: la richiesta va in scadenza senza risposta, e lo stesso succede aprendo il sito nel browser. Non è un blocco per troppe richieste.
+
+La soluzione è escludere dal tunnel della VPN (*split tunneling*) l'**indirizzo IP** del server, `81.126.56.168` (`www.italgiure.giustizia.it`). Il resto della navigazione resta protetto; solo le ricerche sulla Corte escono con l'indirizzo reale. La ricerca nell'**archivio locale** non passa dalla rete e funziona anche con la VPN accesa.
+
 ## Progetti collegati
 
 ### Esistono altri progetti collegati ad Acta Diurna?
 
 Sì. Acta Diurna fa parte dei progetti open source di [SOsintOps](https://github.com/SOsintOps):
 
-*   **[Iudex](https://github.com/SOsintOps/Iudex)**: applicazione locale per cercare e consultare le sentenze della Corte di Cassazione. Acta Diurna la può interrogare, se lo attivi in IMPOSTAZIONI, per cercare il nome di una persona o di una società di un caso; le entità dei due programmi usano lo stesso formato.
+*   **[Iudex](https://github.com/SOsintOps/Iudex)**: applicazione locale per cercare e consultare le sentenze della Corte di Cassazione. Acta Diurna la può interrogare, se lo attivi in IMPOSTAZIONI, per cercare il nome di una persona o di una società di un caso; le entità dei due programmi, e di Praeco, usano lo stesso formato. Le tre applicazioni sono autonome: collaborano e si scambiano i dati, ma ognuna funziona da sola, senza le altre installate.
 *   **[Intelligence Field Notes](https://github.com/SOsintOps/intelligence-field-notes)** (in inglese): la raccolta di riferimento su standard analitici, metodo OSINT, linguaggio della probabilità, valutazione delle fonti e scrittura del report. È la fonte delle regole usate nei report di Acta Diurna.
 *   **[Elementary CTI](https://github.com/SOsintOps/elementary-CTI)**: aggregatore di threat intelligence sul ransomware, utile per seguire le vittime di attacchi ransomware in Italia quando un caso riguarda il crimine informatico.
 *   **[Quaesitor](https://github.com/SOsintOps/quaesitor)**: grafo locale per indagini OSINT su persone, telefoni, account, società, veicoli e luoghi, con il metodo di analisi dei legami dell'UNODC. Serve per mettere in relazione le persone e le società che compaiono nei casi.

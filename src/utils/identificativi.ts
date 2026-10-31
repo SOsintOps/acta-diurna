@@ -1,5 +1,5 @@
 // Normalizzazione e convalida degli identificativi, secondo il formato comune
-// delle entita' condiviso con Iudex e Praeco. Ogni funzione ha lo stesso nome e
+// delle entita' condiviso con Iudex. Ogni funzione ha lo stesso nome e
 // lo stesso comportamento dell'implementazione di riferimento in Python: i casi
 // di prova in tests/fixtures/entita-casi-prova.jsonl lo verificano.
 

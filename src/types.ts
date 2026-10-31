@@ -43,8 +43,8 @@ export interface CaseData {
     seizedAssetsDescription: string | null;
   };
   /**
-   * Persone, societa', citazioni e legami nel formato comune con Iudex e
-   * Praeco (italgiure-work/comune/entita-formato.md). Assente solo negli
+   * Persone, societa', citazioni e legami nel formato comune con Iudex
+   * (formato comune delle entita'). Assente solo negli
    * archivi non ancora migrati.
    */
   entita?: EntitaCaso;
@@ -81,8 +81,8 @@ export interface DeepDiveReport {
 }
 
 // --- Entita' -----------------------------------------------------------------
-// Formato comune con Iudex e Praeco: nomi italiani, stessi campi e stessi uid
-// (italgiure-work/comune/entita-formato.md). Le estensioni di Acta Diurna sono
+// Formato comune con Iudex: nomi italiani, stessi campi e stessi uid
+// (formato comune delle entita'). Le estensioni di Acta Diurna sono
 // campi in piu' che le altre app ignorano.
 
 export type Sesso = 'M' | 'F';
@@ -219,7 +219,7 @@ export interface EntitaEstratte {
 /**
  * Un'entita' del caso trovata in una sentenza di Iudex e collegata dall'analista.
  * E' un candidato da verificare (nomi oscurati, omonimi), non una fusione di identita'.
- * Record `riscontro` del formato comune (italgiure-work/comune/entita-formato.md).
+ * Record `riscontro` del formato comune (formato comune delle entita').
  */
 export interface Riscontro {
   uid_entita: string;

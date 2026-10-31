@@ -5,8 +5,8 @@ import type {
 import { chiaveCaso, uidPersona, uidSocieta } from '../utils/entitaUid';
 import { N, O, cfDaSalvare, cfPersonaValido, dataCompleta, normRea, numericoValido } from '../utils/identificativi';
 
-// Dalle entita' come le restituisce il modello al formato comune con Iudex e
-// Praeco (italgiure-work/comune/entita-formato.md). Il modello propone, il
+// Dalle entita' come le restituisce il modello al formato comune con Iudex
+// (formato comune delle entita'). Il modello propone, il
 // codice decide: codici fiscali e P.IVA solo se validi, date solo se complete,
 // sesso solo dalle fonti ammesse, mai dal nome proprio.
 

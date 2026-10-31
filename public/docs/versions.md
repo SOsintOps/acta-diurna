@@ -31,7 +31,7 @@ Questo documento traccia le principali modifiche, funzionalità e miglioramenti 
 
 - **SEGNALA URL** crea solo il caso: il report di approfondimento, la chiamata più cara, non
   parte più da solo e si avvia con **APPROFONDIMENTO**.
-- I **legami persona–società** restano: servono alla compatibilità con Iudex e Praeco.
+- I **legami persona–società** restano: servono alla compatibilità con Iudex.
 
 ---
 
@@ -68,7 +68,7 @@ ogni aggiornamento era una chiamata a Claude con ricerca web. Un caso si aggiorn
 
 **Persone e società compatibili con Iudex**
 
-Le entità dei casi seguono ora il formato comune con Iudex e Praeco, per
+Le entità dei casi seguono ora il formato comune con Iudex, per
 scambiare i dati e incrociarli in futuro con le sentenze della Cassazione.
 
 - **Persone**:
@@ -87,7 +87,7 @@ scambiare i dati e incrociarli in futuro con le sentenze della Cassazione.
   stanno sulla citazione della persona nel caso, come in Iudex.
 - **Legami persona–società**: amministratore, socio, prestanome.
 - **Identità stabile.** Ogni persona e società ha un identificativo calcolato
-  come in Iudex e Praeco: la stessa persona, scritta «FIORE ANDREA» o «Andrea
+  come in Iudex: la stessa persona, scritta «FIORE ANDREA» o «Andrea
   Fiore», è una sola.
 - **Esportazione.** I pulsanti **ESPORTA FTM** ed **ESPORTA JSONL** salvano
   persone, società e casi in FollowTheMoney (si aprono in Aleph) e nel

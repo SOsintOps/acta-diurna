@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { uidPersona, uidSocieta } from '../src/utils/entitaUid';
 import { N, cfPersonaValido, numericoValido, dataCompleta, normRea } from '../src/utils/identificativi';
 
-// Casi di prova del formato comune delle entita' (Iudex, Praeco, Acta Diurna).
+// Casi di prova del formato comune delle entita' (Iudex, Acta Diurna).
 // La copia di riferimento e il generatore stanno nel repository di lavoro
 // condiviso; qui c'e' una copia: se cambia la specifica, si aggiorna anche questa.
 const casi = readFileSync(new URL('./fixtures/entita-casi-prova.jsonl', import.meta.url), 'utf8')
@@ -11,7 +11,7 @@ const casi = readFileSync(new URL('./fixtures/entita-casi-prova.jsonl', import.m
     .filter(Boolean)
     .map(riga => JSON.parse(riga));
 
-describe('uid comuni con Iudex e Praeco', () => {
+describe('uid comuni con Iudex', () => {
     it.each(casi)('$tipo: $nota', async ({ tipo, ingresso, uid }) => {
         const { provvedimento = '', ...resto } = ingresso;
         const calcolato = tipo === 'persona'
@@ -22,7 +22,7 @@ describe('uid comuni con Iudex e Praeco', () => {
 });
 
 describe('convalida degli identificativi', () => {
-    it('normalizza come Praeco', () => {
+    it('normalizza come il formato comune', () => {
         expect(N("D'Angelo")).toBe('D ANGELO');
         expect(N('Niccolò  Gallo-Rossi')).toBe('NICCOLO GALLO ROSSI');
     });

@@ -2,8 +2,8 @@ import type { CaseData, Citazione, EntitaCaso, Legame, Persona, Societa } from '
 import { H, chiaveCaso } from '../utils/entitaUid';
 import { MIETITORE, entitaDelCaso, nomeSocieta } from './entita';
 
-// Esportazioni nel formato comune con Iudex e Praeco
-// (italgiure-work/comune/entita-formato.md): FollowTheMoney NDJSON, che si
+// Esportazioni nel formato comune con Iudex
+// (formato comune delle entita'): FollowTheMoney NDJSON, che si
 // apre in Aleph e con la libreria ftm, e il pacchetto JSONL di scambio.
 // L'id FtM di persone e societa' e' il loro uid: la stessa entita' ha lo
 // stesso id negli export di tutte le app.
@@ -83,7 +83,7 @@ const citazioneFtm = async (ci: Citazione, evento: string): Promise<EntitaFtm> =
     }),
 });
 
-// Il ruolo resta in italiano nella proprieta' role, come in Iudex e Praeco.
+// Il ruolo resta in italiano nella proprieta' role, come in Iudex.
 const SCHEMA_LEGAME: Record<string, [string, string, string]> = {
     amministrazione: ['Directorship', 'director', 'organization'],
     proprieta: ['Ownership', 'owner', 'asset'],

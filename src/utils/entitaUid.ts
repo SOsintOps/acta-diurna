@@ -1,6 +1,6 @@
 import { F, L, N, O, cfPersonaValido, dataCompleta, normRea, numericoValido } from './identificativi';
 
-// uid di persone e societa' secondo il formato comune con Iudex e Praeco: la
+// uid di persone e societa' secondo il formato comune con Iudex: la
 // stessa entita' ha lo stesso uid in ogni app, e l'uid e' anche il suo id
 // FollowTheMoney.
 

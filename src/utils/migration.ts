@@ -6,7 +6,7 @@ import { getAllCases, updateCase } from '../db';
 
 /**
  * Entita' del formato fino alla 0.3 (entities.individuals / companies) nel
- * formato comune con Iudex e Praeco. Restituisce null se il caso e' gia'
+ * formato comune con Iudex. Restituisce null se il caso e' gia'
  * migrato. Non si fa in un upgrade di Dexie perche' gli uid si calcolano con
  * crypto.subtle, asincrono: dentro la transazione la chiuderebbe a meta'.
  */
@@ -100,7 +100,7 @@ export const migrateImportedData = async (data: any): Promise<{ migratedData: { 
         return migratedCase;
     });
 
-    // 1b. Entita' nel formato comune con Iudex e Praeco.
+    // 1b. Entita' nel formato comune con Iudex.
     for (let i = 0; i < migratedCases.length; i++) {
         const nuovo = await migraEntita(migratedCases[i]);
         if (nuovo) {
